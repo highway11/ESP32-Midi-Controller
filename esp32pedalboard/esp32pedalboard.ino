@@ -29,6 +29,10 @@ const int redPin = 25;     // 13 corresponds to GPIO13
 const int greenPin = 32;   // 12 corresponds to GPIO12
 const int bluePin = 33;    // 14 corresponds to GPIO14
 char* originalColor = "red";
+const long blinkInterval = 1000;
+unsigned long previousMillis = 0;
+bool blinkLed = true;
+bool isLedOn = true;
 
 // Setting PWM bit resolution
 const int resolution = 256;
@@ -57,12 +61,15 @@ void WiFiGotIP(WiFiEvent_t event, WiFiEventInfo_t info){
   Serial.println("IP address: ");
   Serial.println(WiFi.localIP());
   setRGBColor(originalColor);
+  blinkLed = false;
 }
 
 void WiFiStationDisconnected(WiFiEvent_t event, WiFiEventInfo_t info){
   Serial.println("Disconnected from WiFi access point");
   Serial.print("WiFi lost connection. Reason: ");
   setRGBColor("red");
+  originalColor = "red";
+  //blinkLed = true;
   
   Serial.println(info.disconnected.reason);
   //Serial.println("Trying to Reconnect");
@@ -266,11 +273,14 @@ void setup()
 
   AppleMIDI.setHandleConnected([](const APPLEMIDI_NAMESPACE::ssrc_t & ssrc, const char* name) {
     isConnected++;
+    blinkLed = false;
+    setRGBColor(originalColor);
     DBG(F("Connected to session"), ssrc, name);
   });
   AppleMIDI.setHandleDisconnected([](const APPLEMIDI_NAMESPACE::ssrc_t & ssrc) {
     isConnected--;
     DBG(F("Disconnected"), ssrc);
+    blinkLed = true;
   });
   
   MIDI.setHandleNoteOn([](byte channel, byte note, byte velocity) {
@@ -288,7 +298,22 @@ void setup()
 // -----------------------------------------------------------------------------
 void loop()
 {
-   
+
+   unsigned long currentMillis = millis();
+
+   if ((currentMillis - previousMillis >= blinkInterval) && blinkLed == true) {
+      previousMillis = currentMillis;
+
+      if (isLedOn) {
+        isLedOn = false;
+        setRGBColor("off");
+        
+      } else {
+        isLedOn = true;
+        setRGBColor(originalColor);
+      }
+      
+   }
    
   // Update the Bounce instance :
   
@@ -481,6 +506,7 @@ void loop()
   if (newExpVal != lastExpVal) {
       MIDI.sendNoteOn(31, newExpVal, channel);
       //Serial.println(newExpVal);
+      //Serial.println(analogRead(expPin));
   }
   lastExpVal = newExpVal;
   delay(10);
@@ -505,18 +531,24 @@ void setRGBColor(char* color) {
   if (color == "blue") {
     analogWrite(redPin, 0);
     analogWrite(greenPin, 0);
-    analogWrite(bluePin, 20);
+    analogWrite(bluePin, 10);
   }
 
   if (color == "green") {
     analogWrite(redPin, 0);
-    analogWrite(greenPin, 20);
+    analogWrite(greenPin, 10);
     analogWrite(bluePin, 0);
   }
 
   if (color == "white") {
-    analogWrite(redPin, 20);
-    analogWrite(greenPin, 20);
-    analogWrite(bluePin, 20);
+    analogWrite(redPin, 10);
+    analogWrite(greenPin, 10);
+    analogWrite(bluePin, 10);
+  }
+
+    if (color == "off") {
+    analogWrite(redPin, 0);
+    analogWrite(greenPin, 0);
+    analogWrite(bluePin, 0);
   }
 }
