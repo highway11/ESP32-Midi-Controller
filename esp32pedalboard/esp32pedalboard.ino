@@ -45,8 +45,8 @@ const int resolution = 256;
 #include <AppleMIDI.h>
 
 // DEFINE HERE THE KNOWN NETWORKS
-const char* KNOWN_SSID[] = {"YourWifi1", "YourWifi2", "YourWifi3"};
-const char* KNOWN_PASSWORD[] = {"password1", "password2", "password3"};
+const char* KNOWN_SSID[] = {"LL", "TellMyWifiLover", "CoSWTP"};
+const char* KNOWN_PASSWORD[] = {"billow11", "billow11", "660MainStreet"};
 const IPAddress KNOWN_STATICIP[] = {IPAddress(192,168,137,20), IPAddress(192,168,100,20), IPAddress(192,168,50,20)};
 const IPAddress KNOWN_GATEWAY[] = {IPAddress(192,168,137,1), IPAddress(192,168,100,1), IPAddress(192,168,50,1)};
 boolean wifiFound = false;
