@@ -4,6 +4,16 @@
 #include <WiFiUdp.h>
 #include <analogWrite.h>
 
+//These are for the OLED Display --------------------------------------
+#include <Wire.h>
+#include <Adafruit_GFX.h>
+#include <Adafruit_SSD1306.h>
+#define SCREEN_WIDTH 128 // OLED display width, in pixels
+#define SCREEN_HEIGHT 64 // OLED display height, in pixels
+// Declaration for an SSD1306 display connected to I2C (SDA, SCL pins)
+Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, -1);
+String screenText[] = {"", "", "", "", "","","", ""};
+//----------------------------------------------------------------------
 
 // Debounce buttons and switches, https://github.com/thomasfredericks/Bounce2/wiki
 // Define the following here or in Bounce2.h. This make button change detection more responsive.
@@ -30,7 +40,9 @@ const int greenPin = 32;   // 12 corresponds to GPIO12
 const int bluePin = 33;    // 14 corresponds to GPIO14
 char* originalColor = "red";
 const long blinkInterval = 1000;
+const long voltageCheckInterval = 10000; //10 seconds
 unsigned long previousMillis = 0;
+unsigned long previousMillisVoltage = 0;
 bool blinkLed = true;
 bool isLedOn = true;
 
@@ -90,9 +102,13 @@ IPAddress secondaryDNS(8, 8, 4, 4); //optional
 
 const char* deviceName = "pedalboard";
 const int expPin = 34;
+const int batteryVoltagePin = 36;
 //Initialize variables to read expression pedal status
 int newExpVal = 0;
 int lastExpVal = 0;
+//Initialize variables to read battery voltage
+int newVoltage = 0;
+int lastVoltage = 0;
 
 char pass[] = "billow11";    // your network password (use for WPA, or use as key for WEP)
 
@@ -159,15 +175,29 @@ void setup()
   DBG_SETUP(115200);
   DBG("Booting");
 
+  //---------------------initialize oled display---------------------------------------
+  if(!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) { // Address 0x3D for 128x64
+    Serial.println(F("SSD1306 allocation failed"));
+    for(;;);
+  }
+  //delay(2000);
+  display.clearDisplay();
+  display.setTextSize(1);
+  display.setTextColor(WHITE,BLACK);
+  display.setTextWrap(false);
+
   //-------------------------------------------NEW WIFI CODE ------------------------------------------
     // ----------------------------------------------------------------
   // WiFi.scanNetworks will return the number of networks found
   // ----------------------------------------------------------------
   Serial.println(F("scan start"));
+  displayText("scan start");
+  
   int nbVisibleNetworks = WiFi.scanNetworks();
   Serial.println(F("scan done"));
   if (nbVisibleNetworks == 0) {
     Serial.println(F("no networks found. Reset to try again"));
+    displayText("no networks found. Reset to try again");
     while (true); // no need to go further, hang in there, will auto launch the Soft WDT reset
   }
 
@@ -176,6 +206,7 @@ void setup()
   // ----------------------------------------------------------------
   Serial.print(nbVisibleNetworks);
   Serial.println(" network(s) found");
+  displayText(String(nbVisibleNetworks) + " network(s) found");
 
   // ----------------------------------------------------------------
   // check if we recognize one by comparing the visible networks
@@ -197,6 +228,7 @@ void setup()
 
   if (!wifiFound) {
     Serial.println(F("no Known network identified. Reset to try again"));
+    displayText("no Known network identified. Reset to try again");
     while (true); // no need to go further, hang in there, will auto launch the Soft WDT reset
   }
 
@@ -205,6 +237,7 @@ void setup()
   // ----------------------------------------------------------------
   Serial.print(F("\nConnecting to "));
   Serial.println(KNOWN_SSID[n]);
+  displayText(String("Connecting to ") + String(KNOWN_SSID[n]));
   
 
   // ----------------------------------------------------------------
@@ -214,12 +247,14 @@ void setup()
   // Configures static IP address
   if (!WiFi.config(KNOWN_STATICIP[n], KNOWN_GATEWAY[n], subnet, primaryDNS, secondaryDNS)) {
     Serial.println("Failed to configure static ip");
+    displayText("Failed to configure static ip");
   }
   WiFi.begin(KNOWN_SSID[n], KNOWN_PASSWORD[n]);
 
   while (WiFi.status() != WL_CONNECTED) {
-    delay(500);
+    delay(1000);
     Serial.print(".");
+    displayText("Connecting...");
   }
   Serial.println("");
 
@@ -228,6 +263,8 @@ void setup()
   // ----------------------------------------------------------------
   Serial.println(F("WiFi connected, your IP address is "));
   Serial.println(WiFi.localIP());
+  displayText("Connected. IP address is: ");
+  displayText((WiFi.localIP().toString()));
   
   if (strcmp(KNOWN_SSID[n],"LL")) {
     setRGBColor("green");
@@ -276,21 +313,24 @@ void setup()
     blinkLed = false;
     setRGBColor(originalColor);
     DBG(F("Connected to session"), ssrc, name);
+    displayText(String("Connected to session") + String(ssrc));
   });
   AppleMIDI.setHandleDisconnected([](const APPLEMIDI_NAMESPACE::ssrc_t & ssrc) {
     isConnected--;
     DBG(F("Disconnected"), ssrc);
+    displayText(String("Disconnected ") +  String(ssrc));
     blinkLed = true;
   });
   
   MIDI.setHandleNoteOn([](byte channel, byte note, byte velocity) {
     DBG(F("NoteOn"), note);
+    
   });
   MIDI.setHandleNoteOff([](byte channel, byte note, byte velocity) {
     DBG(F("NoteOff"), note);
   });
 
-  DBG(F("Sending NoteOn/Off of note 45, every second"));
+  
 }
 
 // -----------------------------------------------------------------------------
@@ -509,6 +549,74 @@ void loop()
       //Serial.println(analogRead(expPin));
   }
   lastExpVal = newExpVal;
+
+
+  if (currentMillis - previousMillisVoltage >= voltageCheckInterval) {
+    previousMillisVoltage = currentMillis;
+
+
+    //------------take multiple samples--------------------
+    int sampleSize = 10;
+    int sampleRate = 10;
+    int myArray[sampleSize];
+    float average = 0;
+    int maxVal = 0; //set low so any value read will be higher
+    int minVal = 4024; //set arbitrarily high so any value read will be lower
+    
+    for(int i=0; i < sampleSize; i++)
+    {
+      myArray[i] = analogRead(batteryVoltagePin);
+      Serial.print("Single Read: ");
+      Serial.println(myArray[i]);
+    
+      if(myArray[i] >= maxVal) {
+        maxVal = myArray[i];
+      }
+      
+      if(myArray[i] <= minVal) {
+        minVal = myArray[i];
+      }
+    
+      delay(sampleRate);
+    }
+    int sum = 0;
+    for(int i; i < sampleSize; i++)
+    {
+      sum = sum + myArray[i];
+    }
+    Serial.print("Min: ");
+    Serial.print(minVal);
+    Serial.print(" Max: ");
+    Serial.println(maxVal);
+    average = (sum - (maxVal+minVal))/(sampleSize-2);
+    Serial.print("Average discarding min/max: ");
+    Serial.println(average);
+    newVoltage = (sum / sampleSize);
+    //-------------------------------------------------
+    //newVoltage = analogRead(batteryVoltagePin);
+    //newVoltage = map(newVoltage, 0, 4095, 0, 33);
+    //newExpVal = constrain(newExpVal, 0, 127);
+    //if (newVoltage != lastVoltage) {
+        
+        float voltage = (float)(newVoltage/4096.0)*3.3*1.095;
+        float actualVoltage = voltage * 9.588;
+        Serial.print("Vpin Average Reading: ");
+        Serial.print(newVoltage);
+        Serial.print(" Voltage: ");
+        Serial.print(voltage);
+        Serial.print(" actualVoltage: ");
+        Serial.print(actualVoltage);
+        Serial.print(" Voltage Per Cell: ");
+        Serial.println(actualVoltage/4);
+        display.setCursor(0, (4*8));
+        display.setTextSize(2);
+        display.println(String(actualVoltage/4) + String("v"));
+        display.display();
+        
+        
+    //}
+    //lastVoltage = newVoltage;
+  }
   delay(10);
 
    
@@ -551,4 +659,21 @@ void setRGBColor(char* color) {
     analogWrite(greenPin, 0);
     analogWrite(bluePin, 0);
   }
+}
+
+void displayText(String text) {
+  //display.clearDisplay();
+  display.setTextSize(1);
+  //shift all lines up 1 and get rid of first line
+  for (int i = 0; i < 3; ++i) { 
+    screenText[i] = screenText[i+1];
+  }
+
+  screenText[2] = text;
+  
+  for (int i = 0; i <= 3; ++i) {
+    display.setCursor(0, (i*8));
+    display.println(screenText[i]);
+  }
+  display.display();
 }
