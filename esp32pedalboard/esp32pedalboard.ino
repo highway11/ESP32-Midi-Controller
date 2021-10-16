@@ -13,6 +13,10 @@
 // Declaration for an SSD1306 display connected to I2C (SDA, SCL pins)
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, -1);
 String screenText[] = {"", "", "", "", "","","", ""};
+String buttonText[] = {"CLEAN","TREM","DIRTY","BTN 4","BTN 5","BTN 6","BTN 7","BTN 8","BTN 9","BTN 10"};
+int x, minX;
+String message;
+boolean doneConnecting = false;
 //----------------------------------------------------------------------
 
 // Debounce buttons and switches, https://github.com/thomasfredericks/Bounce2/wiki
@@ -80,7 +84,9 @@ void WiFiStationDisconnected(WiFiEvent_t event, WiFiEventInfo_t info){
   Serial.println("Disconnected from WiFi access point");
   Serial.print("WiFi lost connection. Reason: ");
   setRGBColor("red");
+ 
   originalColor = "red";
+  message = "DISCONNECTED FROM WIFI!";
   //blinkLed = true;
   
   Serial.println(info.disconnected.reason);
@@ -185,6 +191,8 @@ void setup()
   display.setTextSize(1);
   display.setTextColor(WHITE,BLACK);
   display.setTextWrap(false);
+  x = display.width();
+  minX = 0;
 
   //-------------------------------------------NEW WIFI CODE ------------------------------------------
     // ----------------------------------------------------------------
@@ -314,11 +322,14 @@ void setup()
     setRGBColor(originalColor);
     DBG(F("Connected to session"), ssrc, name);
     displayText(String("Connected to session") + String(ssrc));
+    doneConnecting = true;
+    message = "Connected to Session";
   });
   AppleMIDI.setHandleDisconnected([](const APPLEMIDI_NAMESPACE::ssrc_t & ssrc) {
     isConnected--;
     DBG(F("Disconnected"), ssrc);
     displayText(String("Disconnected ") +  String(ssrc));
+    message = "DISCONNECTED FROM SESSION!";
     blinkLed = true;
   });
   
@@ -551,74 +562,83 @@ void loop()
   lastExpVal = newExpVal;
 
 
-  if (currentMillis - previousMillisVoltage >= voltageCheckInterval) {
-    previousMillisVoltage = currentMillis;
+ //---CHECK BATTERY VOLTAGE CODE -------------------------------------------
+//  if (currentMillis - previousMillisVoltage >= voltageCheckInterval) {
+//    previousMillisVoltage = currentMillis;
+//
+//
+//    //------------take multiple samples--------------------
+//    int sampleSize = 10;
+//    int sampleRate = 10;
+//    int myArray[sampleSize];
+//    float average = 0;
+//    int maxVal = 0; //set low so any value read will be higher
+//    int minVal = 4024; //set arbitrarily high so any value read will be lower
+//    
+//    for(int i=0; i < sampleSize; i++)
+//    {
+//      myArray[i] = analogRead(batteryVoltagePin);
+//      Serial.print("Single Read: ");
+//      Serial.println(myArray[i]);
+//    
+//      if(myArray[i] >= maxVal) {
+//        maxVal = myArray[i];
+//      }
+//      
+//      if(myArray[i] <= minVal) {
+//        minVal = myArray[i];
+//      }
+//    
+//      delay(sampleRate);
+//    }
+//    int sum = 0;
+//    for(int i; i < sampleSize; i++)
+//    {
+//      sum = sum + myArray[i];
+//    }
+//    Serial.print("Min: ");
+//    Serial.print(minVal);
+//    Serial.print(" Max: ");
+//    Serial.println(maxVal);
+//    average = (sum - (maxVal+minVal))/(sampleSize-2);
+//    Serial.print("Average discarding min/max: ");
+//    Serial.println(average);
+//    newVoltage = (sum / sampleSize);
+//  
+//        
+//        float voltage = (float)(newVoltage/4096.0)*3.3*1.095;
+//        float actualVoltage = voltage * 9.588;
+//        Serial.print("Vpin Average Reading: ");
+//        Serial.print(newVoltage);
+//        Serial.print(" Voltage: ");
+//        Serial.print(voltage);
+//        Serial.print(" actualVoltage: ");
+//        Serial.print(actualVoltage);
+//        Serial.print(" Voltage Per Cell: ");
+//        Serial.println(actualVoltage/4);
+//        display.setCursor(0, (4*8));
+//        display.setTextSize(2);
+//        display.println(String(actualVoltage/4) + String("v"));
+//        display.display();
+//  }
 
-
-    //------------take multiple samples--------------------
-    int sampleSize = 10;
-    int sampleRate = 10;
-    int myArray[sampleSize];
-    float average = 0;
-    int maxVal = 0; //set low so any value read will be higher
-    int minVal = 4024; //set arbitrarily high so any value read will be lower
-    
-    for(int i=0; i < sampleSize; i++)
-    {
-      myArray[i] = analogRead(batteryVoltagePin);
-      Serial.print("Single Read: ");
-      Serial.println(myArray[i]);
-    
-      if(myArray[i] >= maxVal) {
-        maxVal = myArray[i];
-      }
-      
-      if(myArray[i] <= minVal) {
-        minVal = myArray[i];
-      }
-    
-      delay(sampleRate);
-    }
-    int sum = 0;
-    for(int i; i < sampleSize; i++)
-    {
-      sum = sum + myArray[i];
-    }
-    Serial.print("Min: ");
-    Serial.print(minVal);
-    Serial.print(" Max: ");
-    Serial.println(maxVal);
-    average = (sum - (maxVal+minVal))/(sampleSize-2);
-    Serial.print("Average discarding min/max: ");
-    Serial.println(average);
-    newVoltage = (sum / sampleSize);
-    //-------------------------------------------------
-    //newVoltage = analogRead(batteryVoltagePin);
-    //newVoltage = map(newVoltage, 0, 4095, 0, 33);
-    //newExpVal = constrain(newExpVal, 0, 127);
-    //if (newVoltage != lastVoltage) {
-        
-        float voltage = (float)(newVoltage/4096.0)*3.3*1.095;
-        float actualVoltage = voltage * 9.588;
-        Serial.print("Vpin Average Reading: ");
-        Serial.print(newVoltage);
-        Serial.print(" Voltage: ");
-        Serial.print(voltage);
-        Serial.print(" actualVoltage: ");
-        Serial.print(actualVoltage);
-        Serial.print(" Voltage Per Cell: ");
-        Serial.println(actualVoltage/4);
-        display.setCursor(0, (4*8));
-        display.setTextSize(2);
-        display.println(String(actualVoltage/4) + String("v"));
-        display.display();
-        
-        
-    //}
-    //lastVoltage = newVoltage;
-  }
+  
   delay(10);
 
+  //draw scrolling message on oled
+  if (doneConnecting) {
+    display.clearDisplay();
+    display.setCursor(0,7);
+    display.setTextSize(2);
+    display.print("SONG NAME");
+    display.setTextSize(3);
+    display.setCursor(x,28);
+    display.print(message);
+    display.display();
+    x= x-4;
+    int minX = -18 * message.length(); // 18 = 6 pixels/character * text size 3
+    if (x < minX) x = display.width();
+  }
    
 
  
@@ -662,16 +682,16 @@ void setRGBColor(char* color) {
 }
 
 void displayText(String text) {
-  //display.clearDisplay();
+  display.clearDisplay();
   display.setTextSize(1);
   //shift all lines up 1 and get rid of first line
-  for (int i = 0; i < 3; ++i) { 
+  for (int i = 0; i < 7; ++i) { 
     screenText[i] = screenText[i+1];
   }
 
-  screenText[2] = text;
+  screenText[7] = text;
   
-  for (int i = 0; i <= 3; ++i) {
+  for (int i = 0; i <= 7; ++i) {
     display.setCursor(0, (i*8));
     display.println(screenText[i]);
   }
