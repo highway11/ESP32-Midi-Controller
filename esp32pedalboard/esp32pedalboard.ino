@@ -707,6 +707,8 @@ void loop()
     display.setTextSize(3);
     display.setCursor(x,28);
     display.print(message);
+    //draw bar showing expression pedal value on bottom screen
+    display.fillRect(0, 50, newExpVal, 10,WHITE);
     display.display();
     x= x-4;
     int minX = -18 * message.length(); // 18 = 6 pixels/character * text size 3
