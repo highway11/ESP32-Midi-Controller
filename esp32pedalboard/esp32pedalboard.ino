@@ -4,6 +4,22 @@
 #include <WiFiUdp.h>
 #include <analogWrite.h>
 
+#include <HttpRequest.h>
+#include <Preferences.h>
+
+//Editing/Storing Text using web server
+WiFiServer server(8888);
+Preferences preferences;
+HttpRequest httpReq;
+// Current time
+unsigned long currentTime = millis();
+// Previous time
+unsigned long previousTime = 0; 
+// Define timeout time in milliseconds (example: 2000ms = 2s)
+const long timeoutTime = 2000;
+// Variable to store the HTTP req  uest
+String header;
+
 //These are for the OLED Display --------------------------------------
 #include <Wire.h>
 #include <Adafruit_GFX.h>
@@ -136,6 +152,23 @@ APPLEMIDI_CREATE_DEFAULTSESSION_INSTANCE();
 void setup()
 {
 
+  
+  //Get button text from onboard storage
+   preferences.begin("pedalboard", false);
+  preferences.getUInt("counter", 0);
+  for (int i=1;i<=10;i++) {
+    String stringKey = "btn" + String(i);
+    char key[6];
+    stringKey.toCharArray(key,6);
+    Serial.print("Key: ");
+    Serial.println(key);
+    buttonText[i-1] = preferences.getString(key,String(""));
+    Serial.print("Button Text ");
+    Serial.print(i);
+    Serial.print(": ");
+    Serial.println(buttonText[i-1]);
+  }
+  
   pinMode(2, INPUT_PULLUP);
   debouncer2.attach(2);
   debouncer2.interval(5); // interval in ms
@@ -349,6 +382,8 @@ void setup()
   MIDI.setHandleNoteOff([](byte channel, byte note, byte velocity) {
     DBG(F("NoteOff"), note);
   });
+
+  server.begin();
 
   
 }
@@ -683,7 +718,90 @@ void loop()
   // Listen to incoming notes
   MIDI.read();
 
-  
+
+  //Wifi Server for button text code --------------------------------------------------
+  WiFiClient client = server.available();   // Listen for incoming clients
+   //declare name and value to use the request parameters and cookies
+  char name[16], value[50];
+
+    if (client) {                             // If a new client connects,
+    currentTime = millis();
+    previousTime = currentTime;
+    Serial.println("New Client.");          // print a message out in the serial port
+    String currentLine = "";                // make a String to hold incoming data from the client
+    while (client.connected() && currentTime - previousTime <= timeoutTime) {            // loop while the client's connected
+      currentTime = millis();
+      if (client.available()) {             // if there's bytes to read from the client,
+        char c = client.read();             // read a byte, then
+        httpReq.parseRequest(c);
+        Serial.write(c);                    // print it out the serial monitor
+        header += c;
+                //IF request has ended -> handle response
+        if (httpReq.endOfRequest()) {
+
+          client.println("HTTP/1.1 200 OK");
+          client.println("Content-Type: text/html");
+          client.println("Connnection: close");
+          client.println();
+
+
+          
+            for(int i=1;i<=httpReq.paramCount;i++){
+              httpReq.getParam(i,name,value);
+              Serial.print(name);
+              Serial.print("-");
+              Serial.print(value);
+              Serial.println("");
+              String text = String(value);
+              text.replace(String("+"),String(" "));
+              preferences.putString(name,text);
+              if (String(name).indexOf("btn") >= 0) {
+                int btnNum = String(name).substring(3,5).toInt();
+                Serial.print("button #: ");
+                Serial.println(btnNum);
+                buttonText[btnNum-1] = text;
+              }
+            }
+
+            // Display the HTML web page
+            client.println("<!DOCTYPE html><html>");
+            client.println("<head><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">");
+            client.println("<link rel=\"icon\" href=\"data:,\">");
+            client.println("<link rel=\"stylesheet\" href=\"https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css\">");
+            client.println("</head><body><form action=\"/get\"><div class=\"container\"><div class=\"row\"><h1>Text To Display</h1></div>");
+            for (int i=1;i<=10;i++) {
+              client.println("<div class='form-group row'><label class='col-sm-2 col-form-label'>Btn" + String(i) + "</label><div class='col-sm-10'><input type=\"text\" class='form-control' name=\"btn" + String(i) + "\" value=\"" + buttonText[i-1] + "\"/></div></div>");
+            }
+            
+            client.println("<input type=\"submit\" value=\"Change Text\"> ");
+            client.println("</form></body></html>");
+            // The HTTP response ends with another blank line
+            client.println();
+            
+            Serial.println(buttonText[0]);
+            message = buttonText[0];
+            minX = -18 * message.length(); //12 = 6 pixels/character * text size 2
+
+          //Reset object and free dynamic allocated memory
+          httpReq.resetRequest();
+          
+          break;
+        }
+        
+
+      }
+    }
+    // Clear the header variable
+    header = "";
+    // Close the connection
+    delay(1);
+    client.stop();
+    Serial.println("Client disconnected.");
+    Serial.println("");
+     
+  }
+  //----------------------------------------------------------------------------------
+
 }
 
 //Set Color of RGB Led
