@@ -20,6 +20,12 @@ const long timeoutTime = 2000;
 // Variable to store the HTTP req  uest
 String header;
 
+//Store Time On Code -------------------------------
+unsigned long startTime = millis();
+unsigned long lastCheckTime = startTime;
+unsigned long storedOnTime = 0;
+const long checkOnTimeInterval = 30000; //30 seconds
+
 //These are for the OLED Display --------------------------------------
 #include <Wire.h>
 #include <Adafruit_GFX.h>
@@ -152,6 +158,10 @@ APPLEMIDI_CREATE_DEFAULTSESSION_INSTANCE();
 void setup()
 {
 
+  
+  //Get time on from onboard storage
+  preferences.begin("pedalboard", false);
+  storedOnTime = preferences.getULong("ontime", 0);
   
   //Get button text from onboard storage
    preferences.begin("pedalboard", false);
@@ -394,6 +404,18 @@ void setup()
 void loop()
 {
 
+   
+  //update stored on time---------------------------------------------------------------------
+  currentTime = millis();
+  if (currentTime - lastCheckTime > checkOnTimeInterval) {
+    lastCheckTime = currentTime;
+    //update stored on time variable
+    storedOnTime = storedOnTime + (checkOnTimeInterval / 1000); //store time elapsed in seconds
+    preferences.putULong("ontime",storedOnTime);
+    Serial.print("Stored On Time: ");
+    Serial.println(storedOnTime);
+  }
+   
    unsigned long currentMillis = millis();
 
    if ((currentMillis - previousMillis >= blinkInterval) && blinkLed == true) {
@@ -754,14 +776,22 @@ void loop()
               Serial.print("-");
               Serial.print(value);
               Serial.println("");
-              String text = String(value);
-              text.replace(String("+"),String(" "));
-              preferences.putString(name,text);
+
               if (String(name).indexOf("btn") >= 0) {
+                String text = String(value);
+                text.replace(String("+"),String(" "));
+                preferences.putString(name,text);
                 int btnNum = String(name).substring(3,5).toInt();
                 Serial.print("button #: ");
                 Serial.println(btnNum);
                 buttonText[btnNum-1] = text;
+              }
+
+              if (String(name).indexOf("onTime") >= 0) {
+                storedOnTime = int(atof(value) * 60 * 60);
+                Serial.print("updated onTime: ");
+                Serial.println(storedOnTime); 
+                preferences.putULong("ontime",storedOnTime);
               }
             }
 
@@ -774,8 +804,8 @@ void loop()
             for (int i=1;i<=10;i++) {
               client.println("<div class='form-group row'><label class='col-sm-2 col-form-label'>Btn" + String(i) + "</label><div class='col-sm-10'><input type=\"text\" class='form-control' name=\"btn" + String(i) + "\" value=\"" + buttonText[i-1] + "\"/></div></div>");
             }
-            
-            client.println("<input type=\"submit\" value=\"Change Text\"> ");
+            client.println("<div class='form-group row'><label class='col-sm-2 col-form-label'>On Time (hours)</label><input type=\"text\" class='form-control' name=\"onTime\" value=\"" + String((float)storedOnTime/60/60) + "\"/></div></div>");
+            client.println("<input class='btn btn-primary btn-lg' type=\"submit\" value=\"Update Settings\"> ");
             client.println("</form></body></html>");
             // The HTTP response ends with another blank line
             client.println();
