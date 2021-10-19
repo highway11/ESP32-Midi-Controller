@@ -788,7 +788,7 @@ void loop()
               }
 
               if (String(name).indexOf("onTime") >= 0) {
-                storedOnTime = atoll(value);
+                storedOnTime = int(atof(value) * 60 * 60);
                 Serial.print("updated onTime: ");
                 Serial.println(storedOnTime); 
                 preferences.putULong("ontime",storedOnTime);
