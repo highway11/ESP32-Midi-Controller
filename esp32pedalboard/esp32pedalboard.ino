@@ -24,7 +24,7 @@ String header;
 unsigned long startTime = millis();
 unsigned long lastCheckTime = startTime;
 unsigned long storedOnTime = 0;
-const long checkOnTimeInterval = 30000; //30 seconds
+const long checkOnTimeInterval = 60000; //60 seconds
 
 //These are for the OLED Display --------------------------------------
 #include <Wire.h>
@@ -729,6 +729,10 @@ void loop()
     display.setTextSize(3);
     display.setCursor(x,28);
     display.print(message);
+    display.setTextSize(1);
+    //show onTime
+    display.setCursor(56,56);
+    display.print(String((float)storedOnTime/60/60));
     //draw bar showing expression pedal value on bottom screen
     display.fillRect(0, 55, newExpVal, 10,WHITE);
     display.display();
