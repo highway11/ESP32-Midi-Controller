@@ -804,12 +804,13 @@ void loop()
             client.println("<head><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">");
             client.println("<link rel=\"icon\" href=\"data:,\">");
             client.println("<link rel=\"stylesheet\" href=\"https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css\">");
-            client.println("</head><body><form action=\"/get\"><div class=\"container\"><div class=\"row\"><h1>Text To Display</h1></div>");
+            client.println("</head><body><form action=\"/get\"><div class=\"container\">");
+            client.println("<div class='row'><div class='col-sm-12'><h2>Button Text</h2></div></div>");
             for (int i=1;i<=10;i++) {
-              client.println("<div class='form-group row'><label class='col-sm-2 col-form-label'>Btn" + String(i) + "</label><div class='col-sm-10'><input type=\"text\" class='form-control' name=\"btn" + String(i) + "\" value=\"" + buttonText[i-1] + "\"/></div></div>");
+              client.println("<div class='form-group row'><div class='input-group col-sm-12 col-md-6'><div class='input-group-prepend'><div class='input-group-text'>" + String(i) + "</div></div><input type=\"text\" class='form-control' name=\"btn" + String(i) + "\" value=\"" + buttonText[i-1] + "\"/></div></div>");
             }
-            client.println("<div class='form-group row'><label class='col-sm-2 col-form-label'>On Time (hours)</label><input type=\"text\" class='form-control' name=\"onTime\" value=\"" + String((float)storedOnTime/60/60) + "\"/></div></div>");
-            client.println("<input class='btn btn-primary btn-lg' type=\"submit\" value=\"Update Settings\"> ");
+            client.println("<div class='form-group row'><label class='col-xs-2 col-form-label'>On Time (hours)</label><div class='col-xs-10'><input type=\"text\" class='form-control' name=\"onTime\" value=\"" + String((float)storedOnTime/60/60) + "\"/></div></div>");
+            client.println("<div class='form-group row'><div class='col-sm-10'><input class='btn btn-primary btn-lg' type=\"submit\" value=\"Update Settings\"></div></div> ");
             client.println("</form></body></html>");
             // The HTTP response ends with another blank line
             client.println();
