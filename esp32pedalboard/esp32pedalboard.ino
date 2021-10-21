@@ -36,9 +36,9 @@ const long checkOnTimeInterval = 60000; //60 seconds
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, -1);
 String screenText[] = {"", "", "", "", "","","", ""};
 String buttonText[] = {"CLEAN","TREM","DIRTY","BTN 4","BTN 5","BTN 6","BTN 7","BTN 8","TUNER","NEXT SONG"};
-String songs[] = {"WndrflCross","LrdINeedU","ForIWasFar","Gratitude","GreatIsThy","","","","",""};
+String songs[] = {"","","","","","","","","",""};
 int currentSong = 0;
-int numSongs = 4;
+int numSongs = 0;
 int x, minX;
 String message;
 boolean doneConnecting = false;
@@ -165,8 +165,9 @@ void setup()
   
   //Get button text from onboard storage
    preferences.begin("pedalboard", false);
-  preferences.getUInt("counter", 0);
+  
   for (int i=1;i<=10;i++) {
+    //populate button text
     String stringKey = "btn" + String(i);
     char key[6];
     stringKey.toCharArray(key,6);
@@ -177,6 +178,19 @@ void setup()
     Serial.print(i);
     Serial.print(": ");
     Serial.println(buttonText[i-1]);
+
+    //populate songs
+    String stringKey1 = "song" + String(i);
+    char key1[7];
+    stringKey1.toCharArray(key1,7);
+    Serial.print("Key: ");
+    Serial.println(key1);
+    songs[i-1] = preferences.getString(key1,String(""));
+    if (songs[i-1].length() > 0) numSongs += 1;
+    Serial.print("Song ");
+    Serial.print(i);
+    Serial.print(": ");
+    Serial.println(songs[i-1]);
   }
   
   pinMode(2, INPUT_PULLUP);
@@ -772,7 +786,7 @@ void loop()
           client.println("Connnection: close");
           client.println();
 
-
+          if (httpReq.paramCount > 0) numSongs = 0;
           
             for(int i=1;i<=httpReq.paramCount;i++){
               httpReq.getParam(i,name,value);
@@ -789,6 +803,17 @@ void loop()
                 Serial.print("button #: ");
                 Serial.println(btnNum);
                 buttonText[btnNum-1] = text;
+              }
+
+               if (String(name).indexOf("song") >= 0) {
+                String text = String(value);
+                text.replace(String("+"),String(" "));
+                preferences.putString(name,text);
+                int songNum = String(name).substring(4,6).toInt();
+                Serial.print("song #: ");
+                Serial.println(songNum);
+                songs[songNum-1] = text;
+                if (text.length() > 0) numSongs += 1;
               }
 
               if (String(name).indexOf("onTime") >= 0) {
@@ -808,6 +833,10 @@ void loop()
             client.println("<div class='row'><div class='col-sm-12'><h2>Button Text</h2></div></div>");
             for (int i=1;i<=10;i++) {
               client.println("<div class='form-group row'><div class='input-group col-sm-12 col-md-6'><div class='input-group-prepend'><div class='input-group-text'>" + String(i) + "</div></div><input type=\"text\" class='form-control' name=\"btn" + String(i) + "\" value=\"" + buttonText[i-1] + "\"/></div></div>");
+            }
+            client.println("<div class='row'><div class='col-sm-12'><h2>Songs</h2></div></div>");
+            for (int i=1;i<=10;i++) {
+              client.println("<div class='form-group row'><div class='input-group col-sm-12 col-md-6'><div class='input-group-prepend'><div class='input-group-text'>Song " + String(i) + "</div></div><input type=\"text\" class='form-control' name=\"song" + String(i) + "\" value=\"" + songs[i-1] + "\"/></div></div>");
             }
             client.println("<div class='form-group row'><label class='col-xs-2 col-form-label'>On Time (hours)</label><div class='col-xs-10'><input type=\"text\" class='form-control' name=\"onTime\" value=\"" + String((float)storedOnTime/60/60) + "\"/></div></div>");
             client.println("<div class='form-group row'><div class='col-sm-10'><input class='btn btn-primary btn-lg' type=\"submit\" value=\"Update Settings\"></div></div> ");
