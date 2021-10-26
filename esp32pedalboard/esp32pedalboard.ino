@@ -35,7 +35,7 @@ const long checkOnTimeInterval = 60000; //60 seconds
 // Declaration for an SSD1306 display connected to I2C (SDA, SCL pins)
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, -1);
 String screenText[] = {"", "", "", "", "","","", ""};
-String buttonText[] = {"CLEAN","TREM","DIRTY","BTN 4","BTN 5","BTN 6","BTN 7","BTN 8","TUNER","NEXT SONG"};
+String buttonText[10][8] = {{"","","","","","","",""},{"","","","","","","",""},{"","","","","","","",""},{"","","","","","","",""},{"","","","","","","",""},{"","","","","","","",""},{"","","","","","","",""},{"","","","","","","",""},{"","","","","","","",""},{"","","","","","","",""}};
 String songs[] = {"","","","","","","","","",""};
 int currentSong = 0;
 int numSongs = 0;
@@ -158,6 +158,9 @@ APPLEMIDI_CREATE_DEFAULTSESSION_INSTANCE();
 void setup()
 {
 
+   DBG_SETUP(115200);
+   DBG("Booting");
+
   
   //Get time on from onboard storage
   preferences.begin("pedalboard", false);
@@ -167,30 +170,41 @@ void setup()
    preferences.begin("pedalboard", false);
   
   for (int i=1;i<=10;i++) {
-    //populate button text
-    String stringKey = "btn" + String(i);
-    char key[6];
-    stringKey.toCharArray(key,6);
-    Serial.print("Key: ");
-    Serial.println(key);
-    buttonText[i-1] = preferences.getString(key,String(""));
-    Serial.print("Button Text ");
-    Serial.print(i);
-    Serial.print(": ");
-    Serial.println(buttonText[i-1]);
 
     //populate songs
     String stringKey1 = "song" + String(i);
     char key1[7];
     stringKey1.toCharArray(key1,7);
-    Serial.print("Key: ");
-    Serial.println(key1);
     songs[i-1] = preferences.getString(key1,String(""));
     if (songs[i-1].length() > 0) numSongs += 1;
+    Serial.println("");
     Serial.print("Song ");
     Serial.print(i);
     Serial.print(": ");
     Serial.println(songs[i-1]);
+    
+    //populate button text
+    String stringKey = "btn" + getPadded(i);
+    char key[6];
+    stringKey.toCharArray(key,6);
+    for (int x=1;x<=8;x++) {
+      String newStringKey = stringKey + getPadded(x);
+      
+      char newKey[8];
+      newStringKey.toCharArray(newKey,8);
+      //Serial.print("New Key: ");
+      //Serial.println(newKey);
+      buttonText[i-1][x-1] = preferences.getString(newKey,String(""));
+ 
+      Serial.print(" btn ");
+      Serial.print(x);
+      Serial.print(": ");
+      Serial.print(buttonText[i-1][x-1]);
+    }
+    
+
+
+    
   }
   
   pinMode(2, INPUT_PULLUP);
@@ -242,8 +256,7 @@ void setup()
 
   
 
-  DBG_SETUP(115200);
-  DBG("Booting");
+ 
 
   //---------------------initialize oled display---------------------------------------
   if(!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) { // Address 0x3D for 128x64
@@ -491,7 +504,7 @@ void loop()
     // button pressed so send Note On
     MIDI.sendNoteOn(note2, velocity, channel);
     setRGBColor("white");
-    if (disconnected == false) message = buttonText[5];
+    if (disconnected == false) message = buttonText[currentSong][5];
     lastButton = 5;
     Serial.println(F("note 2 on"));
   }
@@ -509,7 +522,7 @@ void loop()
     // button pressed so send Note On
     MIDI.sendNoteOn(note4, velocity, channel);
     setRGBColor("white");
-    if (disconnected == false) message = buttonText[7];
+    if (disconnected == false) message = buttonText[currentSong][7];
     lastButton = 7;
     Serial.println(F("note 4 on"));
   }
@@ -525,7 +538,7 @@ void loop()
     // button pressed so send Note On
     MIDI.sendNoteOn(note5, velocity, channel);
     setRGBColor("white");
-    if (disconnected == false) message = buttonText[6];
+    if (disconnected == false) message = buttonText[currentSong][6];
     lastButton = 6;
     Serial.println(F("note 5 on"));
   }
@@ -542,7 +555,7 @@ void loop()
     // button pressed so send Note On
     MIDI.sendNoteOn(note13, velocity, channel);
     setRGBColor("white");
-    if (disconnected == false) message = buttonText[1];
+    if (disconnected == false) message = buttonText[currentSong][1];
     lastButton = 1;
     Serial.println(F("note 13 on"));
   }
@@ -558,7 +571,7 @@ void loop()
     // button pressed so send Note On
     MIDI.sendNoteOn(note14, velocity, channel);
     setRGBColor("white");
-    if (disconnected == false) message = buttonText[0];
+    if (disconnected == false) message = buttonText[currentSong][0];
     lastButton = 0;
     Serial.println(F("note 14 on"));
   }
@@ -574,7 +587,7 @@ void loop()
     // button pressed so send Note On
     MIDI.sendNoteOn(note15, velocity, channel);
     setRGBColor("white");
-    if (disconnected == false) message = buttonText[2];
+    if (disconnected == false) message = buttonText[currentSong][2];
     lastButton = 2;
     Serial.println(F("note 15 on"));
   }
@@ -585,12 +598,12 @@ void loop()
     Serial.println(F("note 15 off"));
   }
 
-  //-------------Button 10-----------------------
+  //-------------Button 10 NEXT SONG-----------------------
   if (debouncer16.fell()) {
     // button pressed so send Note On
     MIDI.sendNoteOn(note16, velocity, channel);
     setRGBColor("white");
-    if (disconnected == false) message = buttonText[9];
+    if (disconnected == false) message = "NEXT SONG";
     lastButton = 9;
     currentSong++;
     if (currentSong > numSongs -1) currentSong = 0;
@@ -609,10 +622,10 @@ void loop()
     MIDI.sendNoteOn(note17, velocity, channel);
     setRGBColor("white");
     if (tunerActive) {
-     if (disconnected == false) message = buttonText[lastButton];
+     if (disconnected == false) message = buttonText[currentSong][lastButton];
      tunerActive = false;
     } else {
-      if (disconnected == false) message = buttonText[8];
+      if (disconnected == false) message = "TUNER";
       
       tunerActive = true;
     }
@@ -631,7 +644,7 @@ void loop()
     // button pressed so send Note On
     MIDI.sendNoteOn(note18, velocity, channel);
     setRGBColor("white");
-    if (disconnected == false) message = buttonText[3];
+    if (disconnected == false) message = buttonText[currentSong][3];
     lastButton = 3;
     Serial.println(F("note 18 on"));
   }
@@ -647,7 +660,7 @@ void loop()
     // button pressed so send Note On
     MIDI.sendNoteOn(note19, velocity, channel);
     setRGBColor("white");
-    if (disconnected == false) message = buttonText[4];
+    if (disconnected == false) message = buttonText[currentSong][4];
     lastButton = 4;
     Serial.println(F("note 19 on"));
   }
@@ -787,11 +800,13 @@ void loop()
           client.println();
 
           if (httpReq.paramCount > 0) numSongs = 0;
+          int songNum, btnNum;
+          String substr;
           
             for(int i=1;i<=httpReq.paramCount;i++){
               httpReq.getParam(i,name,value);
               Serial.print(name);
-              Serial.print("-");
+              Serial.print(" - ");
               Serial.print(value);
               Serial.println("");
 
@@ -799,19 +814,41 @@ void loop()
                 String text = String(value);
                 text.replace(String("+"),String(" "));
                 preferences.putString(name,text);
-                int btnNum = String(name).substring(3,5).toInt();
-                Serial.print("button #: ");
-                Serial.println(btnNum);
-                buttonText[btnNum-1] = text;
+                songNum = String(name).substring(3,5).toInt();
+                btnNum = String(name).substring(5,7).toInt();
+                buttonText[songNum-1][btnNum-1] = text;
               }
 
                if (String(name).indexOf("song") >= 0) {
                 String text = String(value);
                 text.replace(String("+"),String(" "));
-                preferences.putString(name,text);
-                int songNum = String(name).substring(4,6).toInt();
-                Serial.print("song #: ");
-                Serial.println(songNum);
+                //first param is glitched with a leading carriage return! hacky fix
+                if (name[0] == 's') {
+                  preferences.putString(name,text);
+                } else {
+                  char fixedName[6];
+                  fixedName[0] = name[1];
+                  fixedName[1] = name[2];
+                  fixedName[2] = name[3];
+                  fixedName[3] = name[4];
+                  fixedName[4] = name[5];
+                  fixedName[5] = '\0'; // The terminating NULL
+                  preferences.putString(fixedName,text);
+                }
+                
+               
+                char sub[3];
+                //first param is glitched with a leading carriage return! hacky fix
+                if (name[0] == 's') {
+                  sub[0] = name[4];
+                  sub[1] = name[5];
+                } else {
+                  sub[0] = name[5];
+                  sub[1] = name[6];
+                }
+                
+                sub[2] = '\0'; // The terminating NULL
+                songNum = String(sub).toInt();
                 songs[songNum-1] = text;
                 if (text.length() > 0) numSongs += 1;
               }
@@ -829,23 +866,26 @@ void loop()
             client.println("<head><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">");
             client.println("<link rel=\"icon\" href=\"data:,\">");
             client.println("<link rel=\"stylesheet\" href=\"https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css\">");
-            client.println("</head><body><form action=\"/get\"><div class=\"container\">");
+            client.println("</head><body><form action=\"/post\" method=\"post\"><div class=\"container\">");
             client.println("<div class='row'><div class='col-sm-12'><h2>Button Text</h2></div></div>");
             for (int i=1;i<=10;i++) {
-              client.println("<div class='form-group row'><div class='input-group col-sm-12 col-md-6'><div class='input-group-prepend'><div class='input-group-text'>" + String(i) + "</div></div><input type=\"text\" class='form-control' name=\"btn" + String(i) + "\" value=\"" + buttonText[i-1] + "\"/></div></div>");
-            }
-            client.println("<div class='row'><div class='col-sm-12'><h2>Songs</h2></div></div>");
-            for (int i=1;i<=10;i++) {
+              client.println("<div class='row'><div class='col-sm-12'><h2>Song " + String(i) + "</h2></div></div>");
               client.println("<div class='form-group row'><div class='input-group col-sm-12 col-md-6'><div class='input-group-prepend'><div class='input-group-text'>Song " + String(i) + "</div></div><input type=\"text\" class='form-control' name=\"song" + String(i) + "\" value=\"" + songs[i-1] + "\"/></div></div>");
-            }
+               for (int x=1;x<=8;x++) {
+                  client.println("<div class='form-group row'><div class='input-group col-sm-12 col-md-6'><div class='input-group-prepend'><div class='input-group-text'>" + String(x) + "</div></div><input type=\"text\" class='form-control' name=\"btn" + getPadded(i) + getPadded(x) + "\" value=\"" + buttonText[i-1][x-1] + "\"/></div></div>");
+            
+              }
+           }
+            
+           
             client.println("<div class='form-group row'><label class='col-xs-2 col-form-label'>On Time (hours)</label><div class='col-xs-10'><input type=\"text\" class='form-control' name=\"onTime\" value=\"" + String((float)storedOnTime/60/60) + "\"/></div></div>");
             client.println("<div class='form-group row'><div class='col-sm-10'><input class='btn btn-primary btn-lg' type=\"submit\" value=\"Update Settings\"></div></div> ");
             client.println("</form></body></html>");
             // The HTTP response ends with another blank line
             client.println();
             
-            Serial.println(buttonText[0]);
-            message = buttonText[0];
+            Serial.println(buttonText[0][0]);
+            message = buttonText[0][0];
             minX = -18 * message.length(); //12 = 6 pixels/character * text size 2
 
           //Reset object and free dynamic allocated memory
@@ -918,4 +958,21 @@ void displayText(String text) {
     display.println(screenText[i]);
   }
   display.display();
+}
+
+//get padded string from int
+String getPadded(int num) {
+  char buff[3];
+  char padded[4];
+  
+  //sprintf function will convert the long to a string
+  sprintf(buff, "%.2u", num); // buff will be "01238"
+
+  padded[0] = buff[0];
+  padded[1] = buff[1];
+  padded[2] = buff[2];
+  padded[3] = buff[3];
+  padded[4] = '\0'; // The terminating NULL
+
+  return String(padded);
 }
