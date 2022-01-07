@@ -4,3 +4,4 @@ This controller was built to control VST plugins in Reaper.
 It uses an ESP32, 10 footswitches, 1 expression pedal. 
 It connects to the computer running the DAW via the RTPMidi protocol.
 
+![alt text](https://github.com/highway11/ESP32-Midi-Controller/blob/main/ESP32MidiControllerSchematic.jpg?raw=true)
