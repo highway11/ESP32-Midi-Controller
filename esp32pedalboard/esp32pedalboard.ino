@@ -40,11 +40,21 @@ String songs[] = {"","","","","","","","","",""};
 int currentSong = 0;
 int numSongs = 0;
 int x, minX;
+int xArray[5];
+int minXArray[5];
 String message;
 boolean doneConnecting = false;
 boolean disconnected = false;
 boolean tunerActive = false;
 int lastButton = 0;
+
+// Select I2C BUS
+void SelectScreen(uint8_t bus){
+  Wire.beginTransmission(0x70);  // TCA9548A address
+  Wire.write(1 << bus);          // send byte to select bus
+  Wire.endTransmission();
+  //Serial.print(bus);
+}
 //----------------------------------------------------------------------
 
 // Debounce buttons and switches, https://github.com/thomasfredericks/Bounce2/wiki
@@ -89,8 +99,8 @@ const int resolution = 256;
 #include <AppleMIDI.h>
 
 // DEFINE HERE THE KNOWN NETWORKS
-const char* KNOWN_SSID[] = {"LL", "TellMyWifiLover", "CoSWTP"};
-const char* KNOWN_PASSWORD[] = {"***REMOVED***", "***REMOVED***", "***REMOVED***"};
+const char* KNOWN_SSID[] = {"LL", "TellMyWifiLover"};
+const char* KNOWN_PASSWORD[] = {"***REMOVED***", "***REMOVED***"};
 const IPAddress KNOWN_STATICIP[] = {IPAddress(192,168,137,20), IPAddress(192,168,100,20), IPAddress(192,168,50,20)};
 const IPAddress KNOWN_GATEWAY[] = {IPAddress(192,168,137,1), IPAddress(192,168,100,1), IPAddress(192,168,50,1)};
 boolean wifiFound = false;
@@ -161,6 +171,33 @@ void setup()
    DBG_SETUP(115200);
    DBG("Booting");
 
+  //---------------------initialize oled displays---------------------------------------
+  Serial.println("Initializing OLED Displays");
+  // Start I2C communication with the Multiplexer
+  Wire.begin();
+  for (i=0; i<=5; ++i) {
+     SelectScreen(i);
+     if(!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) { // Address 0x3D for 128x64
+      Serial.println(F("SSD1306 allocation failed"));
+      for(;;);
+    }
+  
+    display.clearDisplay();
+    display.setTextSize(1);
+    display.setTextColor(WHITE,BLACK);
+    if (i == 0) {
+      display.setTextWrap(false);
+    } else {
+      display.setTextWrap(true);
+    }
+
+    xArray[i] = display.width();
+    minXArray[i] = 0;
+  
+  }
+  x = display.width();
+  minX = 0;
+
   
   //Get time on from onboard storage
   preferences.begin("pedalboard", false);
@@ -201,11 +238,10 @@ void setup()
       Serial.print(": ");
       Serial.print(buttonText[i-1][x-1]);
     }
-    
-
-
-    
+  
   }
+
+  updateScreens();
   
   pinMode(2, INPUT_PULLUP);
   debouncer2.attach(2);
@@ -258,18 +294,7 @@ void setup()
 
  
 
-  //---------------------initialize oled display---------------------------------------
-  if(!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) { // Address 0x3D for 128x64
-    Serial.println(F("SSD1306 allocation failed"));
-    for(;;);
-  }
-  //delay(2000);
-  display.clearDisplay();
-  display.setTextSize(1);
-  display.setTextColor(WHITE,BLACK);
-  display.setTextWrap(false);
-  x = display.width();
-  minX = 0;
+
 
   //-------------------------------------------NEW WIFI CODE ------------------------------------------
     // ----------------------------------------------------------------
@@ -504,8 +529,9 @@ void loop()
     // button pressed so send Note On
     MIDI.sendNoteOn(note2, velocity, channel);
     setRGBColor("white");
-    if (disconnected == false) message = buttonText[currentSong][5];
+    //if (disconnected == false) message = buttonText[currentSong][5];
     lastButton = 5;
+    updateScreens();
     Serial.println(F("note 2 on"));
   }
   else if (debouncer2.rose()) {
@@ -555,8 +581,9 @@ void loop()
     // button pressed so send Note On
     MIDI.sendNoteOn(note13, velocity, channel);
     setRGBColor("white");
-    if (disconnected == false) message = buttonText[currentSong][1];
+    //if (disconnected == false) message = buttonText[currentSong][1];
     lastButton = 1;
+    updateScreens();
     Serial.println(F("note 13 on"));
   }
   else if (debouncer13.rose()) {
@@ -571,8 +598,9 @@ void loop()
     // button pressed so send Note On
     MIDI.sendNoteOn(note14, velocity, channel);
     setRGBColor("white");
-    if (disconnected == false) message = buttonText[currentSong][0];
+    //if (disconnected == false) message = buttonText[currentSong][0];
     lastButton = 0;
+    updateScreens();
     Serial.println(F("note 14 on"));
   }
   else if (debouncer14.rose()) {
@@ -587,8 +615,9 @@ void loop()
     // button pressed so send Note On
     MIDI.sendNoteOn(note15, velocity, channel);
     setRGBColor("white");
-    if (disconnected == false) message = buttonText[currentSong][2];
+    //if (disconnected == false) message = buttonText[currentSong][2];
     lastButton = 2;
+    updateScreens();
     Serial.println(F("note 15 on"));
   }
   else if (debouncer15.rose()) {
@@ -603,10 +632,11 @@ void loop()
     // button pressed so send Note On
     MIDI.sendNoteOn(note16, velocity, channel);
     setRGBColor("white");
-    if (disconnected == false) message = "NEXT SONG";
     lastButton = 9;
     currentSong++;
     if (currentSong > numSongs -1) currentSong = 0;
+    if (disconnected == false) message = songs[currentSong];
+    updateScreens();
     Serial.println(F("note 16 on"));
   }
   else if (debouncer16.rose()) {
@@ -622,7 +652,7 @@ void loop()
     MIDI.sendNoteOn(note17, velocity, channel);
     setRGBColor("white");
     if (tunerActive) {
-     if (disconnected == false) message = buttonText[currentSong][lastButton];
+     if (disconnected == false) message = songs[currentSong];
      tunerActive = false;
     } else {
       if (disconnected == false) message = "TUNER";
@@ -644,8 +674,9 @@ void loop()
     // button pressed so send Note On
     MIDI.sendNoteOn(note18, velocity, channel);
     setRGBColor("white");
-    if (disconnected == false) message = buttonText[currentSong][3];
+    //if (disconnected == false) message = buttonText[currentSong][3];
     lastButton = 3;
+    updateScreens();
     Serial.println(F("note 18 on"));
   }
   else if (debouncer18.rose()) {
@@ -660,8 +691,9 @@ void loop()
     // button pressed so send Note On
     MIDI.sendNoteOn(note19, velocity, channel);
     setRGBColor("white");
-    if (disconnected == false) message = buttonText[currentSong][4];
+    //if (disconnected == false) message = buttonText[currentSong][4];
     lastButton = 4;
+    updateScreens();
     Serial.println(F("note 19 on"));
   }
   else if (debouncer19.rose()) {
@@ -749,7 +781,9 @@ void loop()
 
   //draw scrolling message on oled
   if (doneConnecting) {
+    SelectScreen(0);
     display.clearDisplay();
+    display.setTextWrap(false);
     display.setCursor(0,7);
     display.setTextSize(2);
     display.print(songs[currentSong]);
@@ -763,9 +797,11 @@ void loop()
     //draw bar showing expression pedal value on bottom screen
     display.fillRect(0, 55, newExpVal, 10,WHITE);
     display.display();
-    x= x-4;
+    x= x-6;
     int minX = -18 * message.length(); // 18 = 6 pixels/character * text size 3
     if (x < minX) x = display.width();
+
+
   }
    
 
@@ -885,7 +921,8 @@ void loop()
             client.println();
             
             Serial.println(buttonText[0][0]);
-            message = buttonText[0][0];
+            //message = buttonText[0][0];
+            updateScreens();
             minX = -18 * message.length(); //12 = 6 pixels/character * text size 2
 
           //Reset object and free dynamic allocated memory
@@ -944,6 +981,7 @@ void setRGBColor(char* color) {
 }
 
 void displayText(String text) {
+  SelectScreen(0);
   display.clearDisplay();
   display.setTextSize(1);
   //shift all lines up 1 and get rid of first line
@@ -958,6 +996,39 @@ void displayText(String text) {
     display.println(screenText[i]);
   }
   display.display();
+}
+
+//update each button screen
+void updateScreens() {
+   
+    for (i=0;i<=5;++i) {
+      SelectScreen(i+1);
+      display.clearDisplay();
+      display.setTextWrap(true );
+      //show white bar if this button is active
+      display.setCursor(0,0);
+      if (lastButton == i) {
+        display.fillRect(0, 0, 128, 64,WHITE);
+        display.setTextColor(BLACK, WHITE);
+      } else {
+        display.setTextColor(WHITE,BLACK);
+      }
+      
+      int textSize = 4;
+      if (buttonText[currentSong][i].length() < 5) {
+        textSize = 5;
+      }
+      if (buttonText[currentSong][i].length() > 5) {
+        textSize = 3;
+      }
+      if (buttonText[currentSong][i].length() > 14) {
+        textSize = 2;
+      }
+      display.setTextSize(textSize);
+      display.setCursor(2,2);
+      display.print(buttonText[currentSong][i]);
+      display.display();
+    }
 }
 
 //get padded string from int
