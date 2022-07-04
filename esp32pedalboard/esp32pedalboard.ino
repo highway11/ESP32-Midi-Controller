@@ -175,7 +175,7 @@ void setup()
   Serial.println("Initializing OLED Displays");
   // Start I2C communication with the Multiplexer
   Wire.begin();
-  for (i=0; i<=5; ++i) {
+  for (i=0; i<=6; ++i) {
      SelectScreen(i);
      if(!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) { // Address 0x3D for 128x64
       Serial.println(F("SSD1306 allocation failed"));
@@ -510,12 +510,12 @@ void loop()
 
   
   
-  byte note2 = 21;  //1
-  byte note4 = 22;  //2
-  byte note5 = 23;  //3
-  byte note13 = 24; //4
-  byte note14 = 25; //5
-  byte note15 = 26; //6
+  byte note21 = 21;  //1
+  byte note22 = 22;  //2
+  byte note23 = 23;  //3
+  byte note24 = 24; //4
+  byte note25 = 25; //5
+  byte note26 = 26; //6
   byte note16 = 27; //7
   byte note17 = 28; //8
   byte note18 = 29; //9
@@ -524,111 +524,113 @@ void loop()
 
  
  
-  //------------Button 6 --------------------------------
-  if (debouncer2.fell()) {
+  //------------Button 4 --------------------------------
+  if (debouncer14.fell()) {
     // button pressed so send Note On
-    MIDI.sendNoteOn(note2, velocity, channel);
+    MIDI.sendNoteOn(note24, velocity, channel);
     setRGBColor("white");
     //if (disconnected == false) message = buttonText[currentSong][5];
-    lastButton = 5;
+    lastButton = 3;
     updateScreens();
-    Serial.println(F("note 2 on"));
+    Serial.println(F("button on"));
   }
-  else if (debouncer2.rose()) {
+  else if (debouncer14.rose()) {
     // button released so semd Note Off
-    MIDI.sendNoteOff(note2, velocity, channel);
+    MIDI.sendNoteOff(note24, velocity, channel);
     setRGBColor(originalColor);
-    Serial.println(F("note 2 off"));
+    Serial.println(F("button 4 off"));
   }
 
  
 
-  //----------Button 8-------------------
+  //----------Button 3-------------------
   if (debouncer4.fell()) {
     // button pressed so send Note On
-    MIDI.sendNoteOn(note4, velocity, channel);
+    MIDI.sendNoteOn(note23, velocity, channel);
     setRGBColor("white");
-    if (disconnected == false) message = buttonText[currentSong][7];
-    lastButton = 7;
-    Serial.println(F("note 4 on"));
+    //if (disconnected == false) message = buttonText[currentSong][7];
+    lastButton = 2;
+    updateScreens();
+    Serial.println(F("button 3 on"));
   }
   else if (debouncer4.rose()) {
     // button released so semd Note Off
-    MIDI.sendNoteOff(note4, velocity, channel);
+    MIDI.sendNoteOff(note23, velocity, channel);
     setRGBColor(originalColor);
-    Serial.println(F("note 4 off"));
+    Serial.println(F("button 3 off"));
   }
 
-  //----------Button 7 --------------------
+  //----------Button 2 --------------------
   if (debouncer5.fell()) {
     // button pressed so send Note On
-    MIDI.sendNoteOn(note5, velocity, channel);
+    MIDI.sendNoteOn(note22, velocity, channel);
     setRGBColor("white");
-    if (disconnected == false) message = buttonText[currentSong][6];
-    lastButton = 6;
-    Serial.println(F("note 5 on"));
+    //if (disconnected == false) message = buttonText[currentSong][6];
+    lastButton = 1;
+    updateScreens();
+    Serial.println(F("button 2 on"));
   }
   else if (debouncer5.rose()) {
     // button released so semd Note Off
-    MIDI.sendNoteOff(note5, velocity, channel);
+    MIDI.sendNoteOff(note22, velocity, channel);
     setRGBColor(originalColor);
-    Serial.println(F("note 5 off"));
+    Serial.println(F("button 2 off"));
   }
 
   
-  //-------------Button 2----------------------
+  //-------------Button 5----------------------
   if (debouncer13.fell()) {
     // button pressed so send Note On
-    MIDI.sendNoteOn(note13, velocity, channel);
+    MIDI.sendNoteOn(note25, velocity, channel);
     setRGBColor("white");
     //if (disconnected == false) message = buttonText[currentSong][1];
-    lastButton = 1;
+    lastButton = 4;
     updateScreens();
-    Serial.println(F("note 13 on"));
+    Serial.println(F("button 5 on"));
   }
   else if (debouncer13.rose()) {
     // button released so semd Note Off
-    MIDI.sendNoteOff(note13, velocity, channel);
+    MIDI.sendNoteOff(note25, velocity, channel);
     setRGBColor(originalColor);
-    Serial.println(F("note 13 off"));
+    Serial.println(F("button 5 off"));
   }
 
   //------------Button 1------------------------
-  if (debouncer14.fell()) {
+  if (debouncer2.fell()) {
     // button pressed so send Note On
-    MIDI.sendNoteOn(note14, velocity, channel);
+    MIDI.sendNoteOn(note21, velocity, channel);
     setRGBColor("white");
     //if (disconnected == false) message = buttonText[currentSong][0];
     lastButton = 0;
     updateScreens();
-    Serial.println(F("note 14 on"));
+    Serial.println(F("button 1 on"));
   }
-  else if (debouncer14.rose()) {
+  else if (debouncer2.rose()) {
     // button released so semd Note Off
-    MIDI.sendNoteOff(note14, velocity, channel);
+    MIDI.sendNoteOff(note21, velocity, channel);
     setRGBColor(originalColor);
-    Serial.println(F("note 14 off"));
+    Serial.println(F("button 1  off"));
   }
 
-  //-------------Button 3 -----------------------
+  //-------------Button 6 -----------------------
   if (debouncer15.fell()) {
     // button pressed so send Note On
-    MIDI.sendNoteOn(note15, velocity, channel);
+    MIDI.sendNoteOn(note26, velocity, channel);
     setRGBColor("white");
     //if (disconnected == false) message = buttonText[currentSong][2];
-    lastButton = 2;
+    lastButton = 5;
     updateScreens();
-    Serial.println(F("note 15 on"));
+    Serial.println(F("button 6 on"));
   }
   else if (debouncer15.rose()) {
     // button released so semd Note Off
-    MIDI.sendNoteOff(note15, velocity, channel);
+    MIDI.sendNoteOff(note26, velocity, channel);
     setRGBColor(originalColor);
-    Serial.println(F("note 15 off"));
+    Serial.println(F("button 6 off"));
   }
 
   //-------------Button 10 NEXT SONG-----------------------
-  if (debouncer16.fell()) {
+  if (debouncer19.fell()) {
     // button pressed so send Note On
     MIDI.sendNoteOn(note16, velocity, channel);
     setRGBColor("white");
@@ -637,17 +639,17 @@ void loop()
     if (currentSong > numSongs -1) currentSong = 0;
     if (disconnected == false) message = songs[currentSong];
     updateScreens();
-    Serial.println(F("note 16 on"));
+    Serial.println(F("Next Song on"));
   }
-  else if (debouncer16.rose()) {
+  else if (debouncer19.rose()) {
     // button released so semd Note Off
     MIDI.sendNoteOff(note16, velocity, channel);
     setRGBColor(originalColor);
-    Serial.println(F("note 16 off"));
+    Serial.println(F("Next Song off"));
   }
 
   //-------------Button 9 TUNER------------------------
-  if (debouncer17.fell()) {
+  if (debouncer18.fell()) {
     // button pressed so send Note On
     MIDI.sendNoteOn(note17, velocity, channel);
     setRGBColor("white");
@@ -660,43 +662,43 @@ void loop()
       tunerActive = true;
     }
     
-    Serial.println(F("note 17 on"));
+    Serial.println(F("Tuner on"));
   }
-  else if (debouncer17.rose()) {
+  else if (debouncer18.rose()) {
     // button released so semd Note Off
     MIDI.sendNoteOff(note17, velocity, channel);
     setRGBColor(originalColor);
-    Serial.println(F("note 17 off"));
+    Serial.println(F("Tuner off"));
   }
 
-  //------------Button 4----------------------
-  if (debouncer18.fell()) {
+  //------------Button ? ----------------------
+  if (debouncer17.fell()) {
     // button pressed so send Note On
     MIDI.sendNoteOn(note18, velocity, channel);
     setRGBColor("white");
     //if (disconnected == false) message = buttonText[currentSong][3];
-    lastButton = 3;
-    updateScreens();
-    Serial.println(F("note 18 on"));
+    //lastButton = 3;
+    //updateScreens();
+    Serial.println(F("note 17 on"));
   }
-  else if (debouncer18.rose()) {
+  else if (debouncer17.rose()) {
     // button released so semd Note Off
     MIDI.sendNoteOff(note18, velocity, channel);
     setRGBColor(originalColor);
-    Serial.println(F("note 18 off"));
+    Serial.println(F("note 17 off"));
   }
 
-  //-------------Button 5-----------------------
-  if (debouncer19.fell()) {
+  //------------- Button ?-----------------------
+  if (debouncer16.fell()) {
     // button pressed so send Note On
     MIDI.sendNoteOn(note19, velocity, channel);
     setRGBColor("white");
     //if (disconnected == false) message = buttonText[currentSong][4];
-    lastButton = 4;
-    updateScreens();
+    //lastButton = 4;
+    //updateScreens();
     Serial.println(F("note 19 on"));
   }
-  else if (debouncer19.rose()) {
+  else if (debouncer16.rose()) {
     // button released so semd Note Off
     MIDI.sendNoteOff(note19, velocity, channel);
     setRGBColor(originalColor);
@@ -1001,7 +1003,7 @@ void displayText(String text) {
 //update each button screen
 void updateScreens() {
    
-    for (i=0;i<=5;++i) {
+    for (i=0;i<=6;++i) {
       SelectScreen(i+1);
       display.clearDisplay();
       display.setTextWrap(true );
