@@ -7,6 +7,8 @@
 #include <HttpRequest.h>
 #include <Preferences.h>
 
+#include <ardumidi.h>
+
 //Editing/Storing Text using web server
 WiFiServer server(8888);
 Preferences preferences;
@@ -92,35 +94,32 @@ bool isLedOn = true;
 const int resolution = 256;
 
 
-
-
-#define SerialMon Serial
-#define APPLEMIDI_DEBUG SerialMon
-#include <AppleMIDI.h>
-
 // DEFINE HERE THE KNOWN NETWORKS
-const char* KNOWN_SSID[] = {"LL", "TellMyWifiLover"};
-const char* KNOWN_PASSWORD[] = {"***REMOVED***", "***REMOVED***"};
+const char* KNOWN_SSID[] = {"LL", "TellMyWifiLover","CoSWTP"};
+const char* KNOWN_PASSWORD[] = {"***REMOVED***", "***REMOVED***","***REMOVED***"};
 const IPAddress KNOWN_STATICIP[] = {IPAddress(192,168,137,20), IPAddress(192,168,100,20), IPAddress(192,168,50,20)};
 const IPAddress KNOWN_GATEWAY[] = {IPAddress(192,168,137,1), IPAddress(192,168,100,1), IPAddress(192,168,50,1)};
 boolean wifiFound = false;
 int i, n;
 
 void WiFiStationConnected(WiFiEvent_t event, WiFiEventInfo_t info){
-  Serial.println("Connected to AP successfully!");
+  //Serial.println("Connected to AP successfully!");
 }
 
 void WiFiGotIP(WiFiEvent_t event, WiFiEventInfo_t info){
-  Serial.println("WiFi connected");
-  Serial.println("IP address: ");
-  Serial.println(WiFi.localIP());
-  setRGBColor(originalColor);
-  blinkLed = false;
+  //Serial.println("WiFi connected");
+  //Serial.println("IP address: ");
+  //Serial.println(WiFi.localIP());
+  //displayText(String("IP: ") + String(WiFi.localIP()));
+  doneConnecting = true;
+  disconnected = false;
+  //message = "Connected to Session";
+  message = String("IP: ") + String(WiFi.localIP());
 }
 
 void WiFiStationDisconnected(WiFiEvent_t event, WiFiEventInfo_t info){
-  Serial.println("Disconnected from WiFi access point");
-  Serial.print("WiFi lost connection. Reason: ");
+  //Serial.println("Disconnected from WiFi access point");
+  //Serial.print("WiFi lost connection. Reason: ");
   setRGBColor("red");
  
   originalColor = "red";
@@ -128,7 +127,7 @@ void WiFiStationDisconnected(WiFiEvent_t event, WiFiEventInfo_t info){
   disconnected = true;
   //blinkLed = true;
   
-  Serial.println(info.disconnected.reason);
+  //Serial.println(info.disconnected.reason);
   //Serial.println("Trying to Reconnect");
   //WiFi.begin(ssid, password);
 }
@@ -151,16 +150,10 @@ const int batteryVoltagePin = 36;
 //Initialize variables to read expression pedal status
 int newExpVal = 0;
 int lastExpVal = 0;
-//Initialize variables to read battery voltage
-int newVoltage = 0;
-int lastVoltage = 0;
-
-char pass[] = "***REMOVED***";    // your network password (use for WPA, or use as key for WEP)
 
 unsigned long t0 = millis();
-int8_t isConnected = 0;
 
-APPLEMIDI_CREATE_DEFAULTSESSION_INSTANCE();
+
 
 // -----------------------------------------------------------------------------
 //
@@ -168,17 +161,17 @@ APPLEMIDI_CREATE_DEFAULTSESSION_INSTANCE();
 void setup()
 {
 
-   DBG_SETUP(115200);
-   DBG("Booting");
+   Serial.begin(115200);
+   //DBG("Booting");
 
   //---------------------initialize oled displays---------------------------------------
-  Serial.println("Initializing OLED Displays");
+  //Serial.println("Initializing OLED Displays");
   // Start I2C communication with the Multiplexer
   Wire.begin();
   for (i=0; i<=6; ++i) {
      SelectScreen(i);
      if(!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) { // Address 0x3D for 128x64
-      Serial.println(F("SSD1306 allocation failed"));
+      //Serial.println(F("SSD1306 allocation failed"));
       for(;;);
     }
   
@@ -214,11 +207,11 @@ void setup()
     stringKey1.toCharArray(key1,7);
     songs[i-1] = preferences.getString(key1,String(""));
     if (songs[i-1].length() > 0) numSongs += 1;
-    Serial.println("");
-    Serial.print("Song ");
-    Serial.print(i);
-    Serial.print(": ");
-    Serial.println(songs[i-1]);
+    //Serial.println("");
+    //Serial.print("Song ");
+    //Serial.print(i);
+    //Serial.print(": ");
+    //Serial.println(songs[i-1]);
     
     //populate button text
     String stringKey = "btn" + getPadded(i);
@@ -233,10 +226,10 @@ void setup()
       //Serial.println(newKey);
       buttonText[i-1][x-1] = preferences.getString(newKey,String(""));
  
-      Serial.print(" btn ");
-      Serial.print(x);
-      Serial.print(": ");
-      Serial.print(buttonText[i-1][x-1]);
+      //Serial.print(" btn ");
+      //Serial.print(x);
+      //Serial.print(": ");
+      //Serial.print(buttonText[i-1][x-1]);
     }
   
   }
@@ -300,13 +293,13 @@ void setup()
     // ----------------------------------------------------------------
   // WiFi.scanNetworks will return the number of networks found
   // ----------------------------------------------------------------
-  Serial.println(F("scan start"));
+  //Serial.println(F("scan start"));
   displayText("scan start");
   
   int nbVisibleNetworks = WiFi.scanNetworks();
-  Serial.println(F("scan done"));
+  //Serial.println(F("scan done"));
   if (nbVisibleNetworks == 0) {
-    Serial.println(F("no networks found. Reset to try again"));
+    //Serial.println(F("no networks found. Reset to try again"));
     displayText("no networks found. Reset to try again");
     while (true); // no need to go further, hang in there, will auto launch the Soft WDT reset
   }
@@ -314,8 +307,8 @@ void setup()
   // ----------------------------------------------------------------
   // if you arrive here at least some networks are visible
   // ----------------------------------------------------------------
-  Serial.print(nbVisibleNetworks);
-  Serial.println(" network(s) found");
+  //Serial.print(nbVisibleNetworks);
+  //Serial.println(" network(s) found");
   displayText(String(nbVisibleNetworks) + " network(s) found");
 
   // ----------------------------------------------------------------
@@ -323,11 +316,11 @@ void setup()
   // one by one with our list of known networks
   // ----------------------------------------------------------------
   for (i = 0; i < nbVisibleNetworks; ++i) {
-    Serial.println(WiFi.SSID(i)); // Print current SSID
+    //Serial.println(WiFi.SSID(i)); // Print current SSID
     for (n = 0; n < KNOWN_SSID_COUNT; n++) { // walk through the list of known SSID and check for a match
       if (strcmp(KNOWN_SSID[n], WiFi.SSID(i).c_str())) {
-        Serial.print(F("\tNot matching "));
-        Serial.println(KNOWN_SSID[n]);
+        //Serial.print(F("\tNot matching "));
+        //Serial.println(KNOWN_SSID[n]);
       } else { // we got a match
         wifiFound = true;
         break; // n is the network index we found
@@ -337,7 +330,7 @@ void setup()
   } // end for each visible network
 
   if (!wifiFound) {
-    Serial.println(F("no Known network identified. Reset to try again"));
+    //Serial.println(F("no Known network identified. Reset to try again"));
     displayText("no Known network identified. Reset to try again");
     while (true); // no need to go further, hang in there, will auto launch the Soft WDT reset
   }
@@ -345,8 +338,8 @@ void setup()
   // ----------------------------------------------------------------
   // if you arrive here you found 1 known SSID
   // ----------------------------------------------------------------
-  Serial.print(F("\nConnecting to "));
-  Serial.println(KNOWN_SSID[n]);
+  //Serial.print(F("\nConnecting to "));
+  //Serial.println(KNOWN_SSID[n]);
   displayText(String("Connecting to ") + String(KNOWN_SSID[n]));
   
 
@@ -356,23 +349,23 @@ void setup()
   
   // Configures static IP address
   if (!WiFi.config(KNOWN_STATICIP[n], KNOWN_GATEWAY[n], subnet, primaryDNS, secondaryDNS)) {
-    Serial.println("Failed to configure static ip");
+    //Serial.println("Failed to configure static ip");
     displayText("Failed to configure static ip");
   }
   WiFi.begin(KNOWN_SSID[n], KNOWN_PASSWORD[n]);
 
   while (WiFi.status() != WL_CONNECTED) {
     delay(1000);
-    Serial.print(".");
+    //Serial.print(".");
     displayText("Connecting...");
   }
-  Serial.println("");
+  //Serial.println("");
 
   // ----------------------------------------------------------------
   // SUCCESS, you are connected to the known WiFi network
   // ----------------------------------------------------------------
-  Serial.println(F("WiFi connected, your IP address is "));
-  Serial.println(WiFi.localIP());
+  //Serial.println(F("WiFi connected, your IP address is "));
+  //Serial.println(WiFi.localIP());
   displayText("Connected. IP address is: ");
   displayText((WiFi.localIP().toString()));
   
@@ -390,60 +383,7 @@ void setup()
   WiFi.onEvent(WiFiStationDisconnected, SYSTEM_EVENT_STA_DISCONNECTED);
   //------------------------------------------END NEW WIFI CODE----------------------------------------
 
-//  // Configures static IP address
-//  if (!WiFi.config(staticIP, gateway, subnet, primaryDNS, secondaryDNS)) {
-//    Serial.println("Failed to configure static ip");
-//  }
-//
-//  WiFi.begin(ssid, pass);
-//  //WiFi.disconnect();  //Prevent connecting to wifi based on previous configuration
-//  
-//  //WiFi.hostname(deviceName);      // DHCP Hostname (useful for finding device for static lease)
-//  //WiFi.config(staticIP, subnet, gateway, dns);
-//  //WiFi.begin(ssid, pass);
-//
-//  //WiFi.mode(WIFI_STA); //WiFi mode station (connect to wifi router only
-//
-//  while (WiFi.status() != WL_CONNECTED) {
-//    delay(500);
-//    DBG("Establishing connection to WiFi..");
-//  }
-//  DBG("Connected to network");
 
-  DBG(F("OK, now make sure you an rtpMIDI session that is Enabled"));
-  DBG(F("Add device named Arduino with Host"), WiFi.localIP(), "Port", AppleMIDI.getPort(), "(Name", AppleMIDI.getName(), ")");
-  DBG(F("Select and then press the Connect button"));
-  DBG(F("Then open a MIDI listener and monitor incoming notes"));
-  DBG(F("Listen to incoming MIDI commands"));
-
-  MIDI.begin();
-
-  AppleMIDI.setHandleConnected([](const APPLEMIDI_NAMESPACE::ssrc_t & ssrc, const char* name) {
-    isConnected++;
-    blinkLed = false;
-    setRGBColor(originalColor);
-    DBG(F("Connected to session"), ssrc, name);
-    displayText(String("Connected to session") + String(ssrc));
-    doneConnecting = true;
-    disconnected = false;
-    message = "Connected to Session";
-  });
-  AppleMIDI.setHandleDisconnected([](const APPLEMIDI_NAMESPACE::ssrc_t & ssrc) {
-    isConnected--;
-    DBG(F("Disconnected"), ssrc);
-    displayText(String("Disconnected ") +  String(ssrc));
-    message = "DISCONNECTED FROM SESSION!";
-    disconnected = true;
-    blinkLed = true;
-  });
-  
-  MIDI.setHandleNoteOn([](byte channel, byte note, byte velocity) {
-    DBG(F("NoteOn"), note);
-    
-  });
-  MIDI.setHandleNoteOff([](byte channel, byte note, byte velocity) {
-    DBG(F("NoteOff"), note);
-  });
 
   server.begin();
 
@@ -464,8 +404,8 @@ void loop()
     //update stored on time variable
     storedOnTime = storedOnTime + (checkOnTimeInterval / 1000); //store time elapsed in seconds
     preferences.putULong("ontime",storedOnTime);
-    Serial.print("Stored On Time: ");
-    Serial.println(storedOnTime);
+    //Serial.print("Stored On Time: ");
+    //Serial.println(storedOnTime);
   }
    
    unsigned long currentMillis = millis();
@@ -527,18 +467,18 @@ void loop()
   //------------Button 4 --------------------------------
   if (debouncer14.fell()) {
     // button pressed so send Note On
-    MIDI.sendNoteOn(note24, velocity, channel);
+    midi_note_on(channel,note24,velocity);
     setRGBColor("white");
     //if (disconnected == false) message = buttonText[currentSong][5];
     lastButton = 3;
     updateScreens();
-    Serial.println(F("button on"));
+    //Serial.println(F("button on"));
   }
   else if (debouncer14.rose()) {
     // button released so semd Note Off
-    MIDI.sendNoteOff(note24, velocity, channel);
+    midi_note_off(channel,note24,velocity);
     setRGBColor(originalColor);
-    Serial.println(F("button 4 off"));
+    //Serial.println(F("button 4 off"));
   }
 
  
@@ -546,113 +486,111 @@ void loop()
   //----------Button 3-------------------
   if (debouncer4.fell()) {
     // button pressed so send Note On
-    MIDI.sendNoteOn(note23, velocity, channel);
+    midi_note_on(channel,note23,velocity);
     setRGBColor("white");
     //if (disconnected == false) message = buttonText[currentSong][7];
     lastButton = 2;
     updateScreens();
-    Serial.println(F("button 3 on"));
+    //Serial.println(F("button 3 on"));
   }
   else if (debouncer4.rose()) {
     // button released so semd Note Off
-    MIDI.sendNoteOff(note23, velocity, channel);
+    midi_note_off(channel,note23,velocity);
     setRGBColor(originalColor);
-    Serial.println(F("button 3 off"));
+    //Serial.println(F("button 3 off"));
   }
 
   //----------Button 2 --------------------
   if (debouncer5.fell()) {
     // button pressed so send Note On
-    MIDI.sendNoteOn(note22, velocity, channel);
+    midi_note_on(channel,note22,velocity);
     setRGBColor("white");
     //if (disconnected == false) message = buttonText[currentSong][6];
     lastButton = 1;
     updateScreens();
-    Serial.println(F("button 2 on"));
+    //Serial.println(F("button 2 on"));
   }
   else if (debouncer5.rose()) {
     // button released so semd Note Off
-    MIDI.sendNoteOff(note22, velocity, channel);
+    midi_note_off(channel,note22,velocity);
     setRGBColor(originalColor);
-    Serial.println(F("button 2 off"));
+    //Serial.println(F("button 2 off"));
   }
 
   
   //-------------Button 5----------------------
   if (debouncer13.fell()) {
     // button pressed so send Note On
-    MIDI.sendNoteOn(note25, velocity, channel);
+    midi_note_on(channel,note25,velocity);
     setRGBColor("white");
     //if (disconnected == false) message = buttonText[currentSong][1];
     lastButton = 4;
     updateScreens();
-    Serial.println(F("button 5 on"));
+    //Serial.println(F("button 5 on"));
   }
   else if (debouncer13.rose()) {
     // button released so semd Note Off
-    MIDI.sendNoteOff(note25, velocity, channel);
     setRGBColor(originalColor);
-    Serial.println(F("button 5 off"));
+    //Serial.println(F("button 5 off"));
   }
 
   //------------Button 1------------------------
   if (debouncer2.fell()) {
     // button pressed so send Note On
-    MIDI.sendNoteOn(note21, velocity, channel);
+    midi_note_on(channel,note21,velocity);
     setRGBColor("white");
     //if (disconnected == false) message = buttonText[currentSong][0];
     lastButton = 0;
     updateScreens();
-    Serial.println(F("button 1 on"));
+    //Serial.println(F("button 1 on"));
   }
   else if (debouncer2.rose()) {
     // button released so semd Note Off
-    MIDI.sendNoteOff(note21, velocity, channel);
     setRGBColor(originalColor);
-    Serial.println(F("button 1  off"));
+    //Serial.println(F("button 1  off"));
   }
 
   //-------------Button 6 -----------------------
   if (debouncer15.fell()) {
     // button pressed so send Note On
-    MIDI.sendNoteOn(note26, velocity, channel);
+    midi_note_on(channel,note26,velocity);
     setRGBColor("white");
     //if (disconnected == false) message = buttonText[currentSong][2];
     lastButton = 5;
     updateScreens();
-    Serial.println(F("button 6 on"));
+    //Serial.println(F("button 6 on"));
   }
   else if (debouncer15.rose()) {
     // button released so semd Note Off
-    MIDI.sendNoteOff(note26, velocity, channel);
+    midi_note_off(channel,note26,velocity);
     setRGBColor(originalColor);
-    Serial.println(F("button 6 off"));
+    //Serial.println(F("button 6 off"));
   }
 
   //-------------Button 10 NEXT SONG-----------------------
   if (debouncer19.fell()) {
     // button pressed so send Note On
-    MIDI.sendNoteOn(note16, velocity, channel);
+    midi_note_on(channel,note16,velocity);
     setRGBColor("white");
     lastButton = 9;
     currentSong++;
     if (currentSong > numSongs -1) currentSong = 0;
     if (disconnected == false) message = songs[currentSong];
     updateScreens();
-    Serial.println(F("Next Song on"));
+    //Serial.println(F("Next Song on"));
   }
   else if (debouncer19.rose()) {
-    // button released so semd Note Off
-    MIDI.sendNoteOff(note16, velocity, channel);
+    // button released so send Note Off
+    midi_note_off(channel,note16,velocity);
     setRGBColor(originalColor);
-    Serial.println(F("Next Song off"));
+    //Serial.println(F("Next Song off"));
   }
 
   //-------------Button 9 TUNER------------------------
   if (debouncer18.fell()) {
     // button pressed so send Note On
-    MIDI.sendNoteOn(note17, velocity, channel);
-    setRGBColor("white");
+    midi_note_on(channel,note17,velocity);
+    //setRGBColor("white");
     if (tunerActive) {
      if (disconnected == false) message = songs[currentSong];
      tunerActive = false;
@@ -662,47 +600,47 @@ void loop()
       tunerActive = true;
     }
     
-    Serial.println(F("Tuner on"));
+    //Serial.println(F("Tuner on"));
   }
   else if (debouncer18.rose()) {
     // button released so semd Note Off
-    MIDI.sendNoteOff(note17, velocity, channel);
+    midi_note_off(channel,note17,velocity);
     setRGBColor(originalColor);
-    Serial.println(F("Tuner off"));
+    //Serial.println(F("Tuner off"));
   }
 
   //------------Button ? ----------------------
   if (debouncer17.fell()) {
     // button pressed so send Note On
-    MIDI.sendNoteOn(note18, velocity, channel);
+    midi_note_on(channel,note18,velocity);
     setRGBColor("white");
     //if (disconnected == false) message = buttonText[currentSong][3];
     //lastButton = 3;
     //updateScreens();
-    Serial.println(F("note 17 on"));
+    //Serial.println(F("note 17 on"));
   }
   else if (debouncer17.rose()) {
     // button released so semd Note Off
-    MIDI.sendNoteOff(note18, velocity, channel);
+    midi_note_off(channel,note18,velocity);
     setRGBColor(originalColor);
-    Serial.println(F("note 17 off"));
+    //Serial.println(F("note 17 off"));
   }
 
   //------------- Button ?-----------------------
   if (debouncer16.fell()) {
     // button pressed so send Note On
-    MIDI.sendNoteOn(note19, velocity, channel);
+    midi_note_on(channel,note19,velocity);
     setRGBColor("white");
     //if (disconnected == false) message = buttonText[currentSong][4];
     //lastButton = 4;
     //updateScreens();
-    Serial.println(F("note 19 on"));
+    //Serial.println(F("note 19 on"));
   }
   else if (debouncer16.rose()) {
     // button released so semd Note Off
-    MIDI.sendNoteOff(note19, velocity, channel);
+    midi_note_off(channel,note19,velocity);
     setRGBColor(originalColor);
-    Serial.println(F("note 19 off"));
+    //Serial.println(F("note 19 off"));
   }
 
   //PROCESS EXPRESSION PEDAL...
@@ -711,7 +649,7 @@ void loop()
   newExpVal = map(newExpVal, 0, 4095, 0, 127);
   newExpVal = constrain(newExpVal, 0, 127);
   if (newExpVal != lastExpVal) {
-      MIDI.sendNoteOn(31, newExpVal, channel);
+      midi_note_on(channel,31,newExpVal);
       //Serial.println(newExpVal);
       //Serial.println(analogRead(expPin));
   }
@@ -734,8 +672,8 @@ void loop()
 //    for(int i=0; i < sampleSize; i++)
 //    {
 //      myArray[i] = analogRead(batteryVoltagePin);
-//      Serial.print("Single Read: ");
-//      Serial.println(myArray[i]);
+//      //Serial.print("Single Read: ");
+//      //Serial.println(myArray[i]);
 //    
 //      if(myArray[i] >= maxVal) {
 //        maxVal = myArray[i];
@@ -752,26 +690,26 @@ void loop()
 //    {
 //      sum = sum + myArray[i];
 //    }
-//    Serial.print("Min: ");
-//    Serial.print(minVal);
-//    Serial.print(" Max: ");
-//    Serial.println(maxVal);
+//    //Serial.print("Min: ");
+//    //Serial.print(minVal);
+//    //Serial.print(" Max: ");
+//    //Serial.println(maxVal);
 //    average = (sum - (maxVal+minVal))/(sampleSize-2);
-//    Serial.print("Average discarding min/max: ");
-//    Serial.println(average);
+//    //Serial.print("Average discarding min/max: ");
+//    //Serial.println(average);
 //    newVoltage = (sum / sampleSize);
 //  
 //        
 //        float voltage = (float)(newVoltage/4096.0)*3.3*1.095;
 //        float actualVoltage = voltage * 9.588;
-//        Serial.print("Vpin Average Reading: ");
-//        Serial.print(newVoltage);
-//        Serial.print(" Voltage: ");
-//        Serial.print(voltage);
-//        Serial.print(" actualVoltage: ");
-//        Serial.print(actualVoltage);
-//        Serial.print(" Voltage Per Cell: ");
-//        Serial.println(actualVoltage/4);
+//        //Serial.print("Vpin Average Reading: ");
+//        //Serial.print(newVoltage);
+//        //Serial.print(" Voltage: ");
+//        //Serial.print(voltage);
+//        //Serial.print(" actualVoltage: ");
+//        //Serial.print(actualVoltage);
+//        //Serial.print(" Voltage Per Cell: ");
+//        //Serial.println(actualVoltage/4);
 //        display.setCursor(0, (4*8));
 //        display.setTextSize(2);
 //        display.println(String(actualVoltage/4) + String("v"));
@@ -808,8 +746,7 @@ void loop()
    
 
  
-  // Listen to incoming notes
-  MIDI.read();
+  
 
 
   //Wifi Server for button text code --------------------------------------------------
@@ -820,7 +757,7 @@ void loop()
     if (client) {                             // If a new client connects,
     currentTime = millis();
     previousTime = currentTime;
-    Serial.println("New Client.");          // print a message out in the serial port
+    //Serial.println("New Client.");          // print a message out in the serial port
     String currentLine = "";                // make a String to hold incoming data from the client
     while (client.connected() && currentTime - previousTime <= timeoutTime) {            // loop while the client's connected
       currentTime = millis();
@@ -843,10 +780,10 @@ void loop()
           
             for(int i=1;i<=httpReq.paramCount;i++){
               httpReq.getParam(i,name,value);
-              Serial.print(name);
-              Serial.print(" - ");
-              Serial.print(value);
-              Serial.println("");
+              //Serial.print(name);
+              //Serial.print(" - ");
+              //Serial.print(value);
+              //Serial.println("");
 
               if (String(name).indexOf("btn") >= 0) {
                 String text = String(value);
@@ -893,8 +830,8 @@ void loop()
 
               if (String(name).indexOf("onTime") >= 0) {
                 storedOnTime = int(atof(value) * 60 * 60);
-                Serial.print("updated onTime: ");
-                Serial.println(storedOnTime); 
+                //Serial.print("updated onTime: ");
+                //Serial.println(storedOnTime); 
                 preferences.putULong("ontime",storedOnTime);
               }
             }
@@ -922,7 +859,7 @@ void loop()
             // The HTTP response ends with another blank line
             client.println();
             
-            Serial.println(buttonText[0][0]);
+            //Serial.println(buttonText[0][0]);
             //message = buttonText[0][0];
             updateScreens();
             minX = -18 * message.length(); //12 = 6 pixels/character * text size 2
@@ -941,8 +878,8 @@ void loop()
     // Close the connection
     delay(1);
     client.stop();
-    Serial.println("Client disconnected.");
-    Serial.println("");
+    //Serial.println("Client disconnected.");
+    //Serial.println("");
      
   }
   //----------------------------------------------------------------------------------
