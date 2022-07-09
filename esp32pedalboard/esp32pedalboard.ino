@@ -368,6 +368,10 @@ void setup()
   //Serial.println(WiFi.localIP());
   displayText("Connected. IP address is: ");
   displayText((WiFi.localIP().toString()));
+  doneConnecting = true;
+  disconnected = false;
+  //message = "Connected to Session";
+  message = String(WiFi.localIP().toString() + String(":8888"));
   
   if (strcmp(KNOWN_SSID[n],"LL")) {
     setRGBColor("green");
