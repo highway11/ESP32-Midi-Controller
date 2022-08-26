@@ -1,7 +1,10 @@
 # ESP32-Midi-Controller
-Midi Controller with Expression Pedal using RTPMidi over wifi
+Midi Controller with Expression Pedal
 This controller was built to control VST plugins in Reaper.
-It uses an ESP32, 10 footswitches, 1 expression pedal. 
-It connects to the computer running the DAW via the RTPMidi protocol.
 
-![alt text](https://github.com/highway11/ESP32-Midi-Controller/blob/main/ESP32MidiControllerSchematic.jpg?raw=true)
+This branch uses multiple OLED screens using a [TCA9548A multiplexer](https://www.amazon.ca/gp/product/B08DY5VXZ3/)
+
+I also switched from using RTPMidi to using [Hairless Midi](https://projectgus.github.io/hairless-midiserial/) which is MIDI over Usb/Serial
+
+
+![alt text](https://github.com/highway11/ESP32-Midi-Controller/blob/MultipleScreens-USBSerialMIDI/ESP32MidiControllerMultiScreenSchematic.jpg?raw=true)
