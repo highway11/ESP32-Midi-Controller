@@ -3,21 +3,20 @@ Midi Foot Controller with Expression Pedal<br/>
 This controller was built to control VST plugins in Reaper.<br/>
 It can be built quite cheaply, and uses an ESP32, 10 footswitches, 7 OLED Screens, and 1 expression pedal.<br/>
 
-This branch uses multiple OLED screens using a [TCA9548A multiplexer](https://www.amazon.ca/gp/product/B08DY5VXZ3/)
+### Software Needed
+This version no longer uses wireless [RTPMidi](https://www.tobias-erichsen.de/software/rtpmidi.html) but instead uses [Hairless Midi](https://projectgus.github.io/hairless-midiserial/) and [LoopMIDI](https://www.tobias-erichsen.de/software/loopmidi.html) which is MIDI over Usb/Serial. Hairless MIDI is a PC/Mac software that converts data sent over Serial USB connection of the ESP32 to MIDI
 
-I also switched from using RTPMidi to using [Hairless Midi](https://projectgus.github.io/hairless-midiserial/) which is MIDI over Usb/Serial
-
-Previous Iterations of this pedalboard
+### Previous Iterations of this pedalboard
 1. <a href='https://github.com/highway11/ESP32-Midi-Controller/'>Single-OLED RTPMidi (wireless) version</a><br/> 
 2. <a href='https://github.com/highway11/ESP32-Midi-Controller/tree/MultipleScreens'>Multi-OLED RTPMidi (wireless) version</a><br/> 
 
 
-Parts List:<br/>
-1 x <a href='https://www.amazon.ca/gp/product/B07PP1R8YK/'>38-Pin ESP32</a></br>
-10 x <a href='https://www.amazon.ca/gp/product/B077P7NSFJ'>Momentary Footswitches</a></br>
-7 x <a href='https://www.amazon.ca/gp/product/B0833PF7ML/'>SSD1306 0.96" OLED Screens</a></br>
-1 x <a href='https://www.amazon.ca/gp/product/B08DY5VXZ3/'>TCA9548A Multiplexer</a> (for controlling multiple screens)</br>
-1 x <a href='https://www.long-mcquade.com/235511/Keyboards/Keyboard-Accessories/M-Audio/Universal-Expression-Pedal.htm'>M-Audio Expression Pedal</a></br>
+### Parts List<br/>
+- 1 x <a href='https://www.amazon.ca/gp/product/B07PP1R8YK/'>38-Pin ESP32</a></br>
+- 10 x <a href='https://www.amazon.ca/gp/product/B077P7NSFJ'>Momentary Footswitches</a></br>
+- 7 x <a href='https://www.amazon.ca/gp/product/B0833PF7ML/'>SSD1306 0.96" OLED Screens</a></br>
+- 1 x <a href='https://www.amazon.ca/gp/product/B08DY5VXZ3/'>TCA9548A Multiplexer</a> (for controlling multiple screens)</br>
+- 1 x <a href='https://www.long-mcquade.com/235511/Keyboards/Keyboard-Accessories/M-Audio/Universal-Expression-Pedal.htm'>M-Audio Expression Pedal</a></br>
  
 
 ### Entire Rig
