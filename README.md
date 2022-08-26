@@ -1,4 +1,4 @@
-## ESP32 Midi Foot Controller (Multiple OLED Version with Wired HairlessMidi )
+## ESP32 Midi Foot Controller (Multiple OLED Version - Wired )
 Midi Foot Controller with Expression Pedal<br/>
 This controller was built to control VST plugins in Reaper.<br/>
 It can be built quite cheaply, and uses an ESP32, 10 footswitches, 7 OLED Screens, and 1 expression pedal.<br/>
