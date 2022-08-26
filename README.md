@@ -18,7 +18,7 @@ This version no longer uses wireless [RTPMidi](https://www.tobias-erichsen.de/so
 - 1 x <a href='https://www.amazon.ca/gp/product/B08DY5VXZ3/'>TCA9548A Multiplexer</a> (for controlling multiple screens)</br>
 - 1 x <a href='https://www.long-mcquade.com/235511/Keyboards/Keyboard-Accessories/M-Audio/Universal-Expression-Pedal.htm'>M-Audio Expression Pedal</a></br>
 
-In 2022 this parts list is roughly $146 CAD from Amazon or $51 CAD from Aliexpress. I mixed and matched from Alixpress and Amazon depending how long I wanted to wait for shipping
+In 2022 this parts list is roughly $146 CAD from Amazon or $51 CAD from Aliexpress. I mixed and matched from Alixpress and Amazon depending how long I wanted to wait for shipping. The housing is plywood that is nailed/glued together, and spray painted black. You could mount this to anything though, I started prototyping it using a cardboard box!
  
 
 ### Entire Rig
