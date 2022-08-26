@@ -17,6 +17,8 @@ This version no longer uses wireless [RTPMidi](https://www.tobias-erichsen.de/so
 - 7 x <a href='https://www.amazon.ca/gp/product/B0833PF7ML/'>SSD1306 0.96" OLED Screens</a></br>
 - 1 x <a href='https://www.amazon.ca/gp/product/B08DY5VXZ3/'>TCA9548A Multiplexer</a> (for controlling multiple screens)</br>
 - 1 x <a href='https://www.long-mcquade.com/235511/Keyboards/Keyboard-Accessories/M-Audio/Universal-Expression-Pedal.htm'>M-Audio Expression Pedal</a></br>
+
+In 2022 this parts list is roughly $146 CAD from Amazon or $51 CAD from Aliexpress. I mixed and matched from Alixpress and Amazon depending how long I wanted to wait for shipping
  
 
 ### Entire Rig
