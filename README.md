@@ -1,7 +1,7 @@
 ## ESP32-Midi-Controller (Multiple OLED Version with Wired HairlessMidi )
 Midi Controller with Expression Pedal<br/>
 This controller was built to control VST plugins in Reaper.<br/>
-It uses an ESP32, 10 footswitches, 1 expression pedal.<br/>
+It can be built quite cheaply, and uses an ESP32, 10 footswitches, 7 OLED Screens, and 1 expression pedal.<br/>
 It connects to the computer running the DAW via the RTPMidi protocol.</br>
 
 This branch uses multiple OLED screens using a [TCA9548A multiplexer](https://www.amazon.ca/gp/product/B08DY5VXZ3/)
