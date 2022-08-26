@@ -90,7 +90,7 @@ const int resolution = 256;
 
 // DEFINE HERE THE KNOWN NETWORKS
 const char* KNOWN_SSID[] = {"LL", "TellMyWifiLover", "CoSWTP"};
-const char* KNOWN_PASSWORD[] = {"***REMOVED***", "***REMOVED***", "***REMOVED***"};
+const char* KNOWN_PASSWORD[] = {"WIFIPassword", "WIFIPassword", "WIFIPassword"};
 const IPAddress KNOWN_STATICIP[] = {IPAddress(192,168,137,20), IPAddress(192,168,100,20), IPAddress(192,168,50,20)};
 const IPAddress KNOWN_GATEWAY[] = {IPAddress(192,168,137,1), IPAddress(192,168,100,1), IPAddress(192,168,50,1)};
 boolean wifiFound = false;
