@@ -1,8 +1,7 @@
 ## ESP32-Midi-Controller (Multiple OLED Version with Wired HairlessMidi )
-Midi Controller with Expression Pedal<br/>
+Midi Foot Controller with Expression Pedal<br/>
 This controller was built to control VST plugins in Reaper.<br/>
 It can be built quite cheaply, and uses an ESP32, 10 footswitches, 7 OLED Screens, and 1 expression pedal.<br/>
-It connects to the computer running the DAW via the RTPMidi protocol.</br>
 
 This branch uses multiple OLED screens using a [TCA9548A multiplexer](https://www.amazon.ca/gp/product/B08DY5VXZ3/)
 
@@ -34,5 +33,8 @@ Here's an example of how not to wire it :) .  I apologize for my messy wiring. Y
 ### Finished!
 ![alt text](https://github.com/highway11/ESP32-Midi-Controller/blob/main/FinishedPedalBoard.jpg?raw=true)
 
+### Operation
+This controller has an embedded web server. You can connect to it at the IP address you specify in the code, and change the text of the screens for each song in your setlist. Currently it only supports 10 songs, or "banks", but this could be modified. I currently play short set lists that never exceed 10 songs. I have a "Next Song" button that cycles through the songs, as well as switches projects in my Reaper DAW. Each "Song" can have unique text displayed on the screens. Because its simply a MIDI controller you can assign the buttons to anything you like in your DAW. I currently use 6 buttons to switch "snapshots" in Helix Native VST, and 4 buttons to start/stop click and cue tracks </br></br>
+![alt text](https://github.com/highway11/ESP32-Midi-Controller/blob/main/webServer.jpg?raw=true)
 
 
