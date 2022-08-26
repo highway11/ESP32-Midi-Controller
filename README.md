@@ -8,10 +8,10 @@ This branch uses multiple OLED screens using a [TCA9548A multiplexer](https://ww
 
 I also switched from using RTPMidi to using [Hairless Midi](https://projectgus.github.io/hairless-midiserial/) which is MIDI over Usb/Serial
 
-
+Previous Iterations of this pedalboard
 1. <a href='https://github.com/highway11/ESP32-Midi-Controller/'>Single-OLED RTPMidi (wireless) version</a><br/> 
 2. <a href='https://github.com/highway11/ESP32-Midi-Controller/tree/MultipleScreens'>Multi-OLED RTPMidi (wireless) version</a><br/> 
-3. <a href='https://github.com/highway11/ESP32-Midi-Controller/tree/MultipleScreens-USBSerialMIDI'>Multi-OLED HairlessMidi (wired) version</a> (Version I currently use)<br/>
+
 
 Parts List:<br/>
 1 x <a href='https://www.amazon.ca/gp/product/B07PP1R8YK/'>38-Pin ESP32</a></br>
