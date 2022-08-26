@@ -12,7 +12,7 @@ Note: This branch is an older version of my controller. I've since updated it wi
 ### Entire Rig
 <img src='https://github.com/highway11/ESP32-Midi-Controller/blob/main/EntireRig.jpg?raw=true' width=400 />
 
-## One OLED Version
+## Single OLED Version
 ### Schematic
 ![alt text](https://github.com/highway11/ESP32-Midi-Controller/blob/main/ESP32MidiControllerSchematic.jpg?raw=true)
 
