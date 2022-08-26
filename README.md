@@ -29,9 +29,10 @@ Parts List:<br/>
 ![alt text](https://github.com/highway11/ESP32-Midi-Controller/blob/MultipleScreens-USBSerialMIDI/ESP32MidiControllerMultiScreenSchematic.jpg?raw=true)
 
 ### Gut shot (Multi OLED version)
-![alt text](https://github.com/highway11/ESP32-Midi-Controller/blob/main/InsidePedalBoard.jpg?raw=true)
+Here's an example of how not to wire it :) .  I apologize for my messy wiring. You can see remnants of previous versions which used a USB Battery bank and switch. I've also stopped using the Female TRS Jack to connect the M-Audio expression pedal and hard wired it. Most of the wires are taken from CAT5 ethernet cabling, as well as some previous wires I had laying around. 
+![alt text](https://github.com/highway11/ESP32-Midi-Controller/blob/main/InternalWiringMulitOLED.jpg?raw=true)
 ### Finished!
-![alt text](https://github.com/highway11/ESP32-Midi-Controller/blob/main/MultiOLEDPedalboard.jpg?raw=true)
+![alt text](https://github.com/highway11/ESP32-Midi-Controller/blob/main/FinishedPedalBoard.jpg?raw=true)
 
 
 
