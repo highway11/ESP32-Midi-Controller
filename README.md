@@ -1,4 +1,4 @@
-## ESP32-Midi-Controller (Multiple OLED Version with Wireless RTPMidi )
+## ESP32-Midi-Controller (Multiple OLED Version with Wired HairlessMidi )
 Midi Controller with Expression Pedal<br/>
 This controller was built to control VST plugins in Reaper.<br/>
 It uses an ESP32, 10 footswitches, 1 expression pedal.<br/>
