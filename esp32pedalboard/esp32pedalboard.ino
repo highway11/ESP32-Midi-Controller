@@ -146,10 +146,14 @@ IPAddress secondaryDNS(8, 8, 4, 4); //optional
 
 const char* deviceName = "pedalboard";
 const int expPin = 34;
+const int exp2Pin = 35;
 const int batteryVoltagePin = 36;
 //Initialize variables to read expression pedal status
 int newExpVal = 0;
 int lastExpVal = 0;
+int newExp2Val = 0;
+int newExp2ValPercent = 0;
+int lastExp2Val = 0;
 
 unsigned long t0 = millis();
 
@@ -648,7 +652,6 @@ void loop()
   }
 
   //PROCESS EXPRESSION PEDAL...
-
   newExpVal = analogRead(expPin);
   newExpVal = map(newExpVal, 0, 4095, 0, 127);
   newExpVal = constrain(newExpVal, 0, 127);
@@ -658,6 +661,22 @@ void loop()
       //Serial.println(analogRead(expPin));
   }
   lastExpVal = newExpVal;
+
+  //PROCESS EXPRESSION PEDAL 2...
+  newExp2Val = analogRead(exp2Pin);
+  newExp2ValPercent = analogRead(exp2Pin);
+  newExp2Val = map(newExp2Val, 0, 4095, 0, 127);
+  newExp2Val = constrain(newExp2Val, 0, 127);
+ 
+  if (newExp2Val != lastExp2Val) {
+      midi_note_on(channel,30,newExp2Val);
+      newExp2ValPercent = map(newExp2ValPercent, 0, 4095, 0, 100);
+      newExp2ValPercent = constrain(newExp2ValPercent, 0, 100);
+      message = newExp2ValPercent;
+      //Serial.println(newExp2Val);
+      //Serial.println(analogRead(exp2Pin));
+  }
+  lastExp2Val = newExp2Val;
 
 
  //---CHECK BATTERY VOLTAGE CODE -------------------------------------------
@@ -732,7 +751,9 @@ void loop()
     display.setTextSize(2);
     display.print(songs[currentSong]);
     display.setTextSize(3);
-    display.setCursor(x,28);
+    //disable scrolling for exp2
+    //display.setCursor(x,28);
+    display.setCursor(20,28);
     display.print(message);
     display.setTextSize(1);
     //show onTime
