@@ -669,7 +669,7 @@ void loop()
   newExp2Val = constrain(newExp2Val, 0, 127);
  
   if (newExp2Val != lastExp2Val) {
-      midi_note_on(channel,30,newExp2Val);
+      midi_note_on(channel,32,newExp2Val);
       newExp2ValPercent = map(newExp2ValPercent, 0, 4095, 0, 100);
       newExp2ValPercent = constrain(newExp2ValPercent, 0, 100);
       message = newExp2ValPercent;
