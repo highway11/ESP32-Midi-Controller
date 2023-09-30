@@ -38,6 +38,7 @@ const long checkOnTimeInterval = 60000; //60 seconds
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, -1);
 String screenText[] = {"", "", "", "", "","","", ""};
 String buttonText[10][8] = {{"","","","","","","",""},{"","","","","","","",""},{"","","","","","","",""},{"","","","","","","",""},{"","","","","","","",""},{"","","","","","","",""},{"","","","","","","",""},{"","","","","","","",""},{"","","","","","","",""},{"","","","","","","",""}};
+byte buttonState[] = {0,0,0,0,0,0};
 String songs[] = {"","","","","","","","","",""};
 int currentSong = 0;
 int numSongs = 0;
@@ -468,9 +469,8 @@ void loop()
   byte note17 = 28; //8
   byte note18 = 29; //9
   byte note19 = 30; //10
-  
 
- 
+  
  
   //------------Button 4 --------------------------------
   if (debouncer14.fell()) {
@@ -971,13 +971,32 @@ void updateScreens() {
       display.setTextWrap(true );
       //show white bar if this button is active
       display.setCursor(0,0);
-      if (lastButton == i) {
-        display.fillRect(0, 0, 128, 64,WHITE);
-        display.setTextColor(BLACK, WHITE);
+      if (currentSong == 0) {
+        if (lastButton == i) {
+          //the first song is now always pedalboard mode
+            if (buttonState[i] == 0) {
+              //turn background white
+              display.fillRect(0, 0, 128, 64,WHITE);
+              display.setTextColor(BLACK, WHITE);
+              buttonState[i] = 1;
+            } else {
+              //turn background black
+              display.setTextColor(WHITE,BLACK);
+              buttonState[i] = 0;
+            }
+        }
+        
       } else {
-        display.setTextColor(WHITE,BLACK);
-      }
+      //we are in snapshot mode
+         if (lastButton == i) {
+          display.fillRect(0, 0, 128, 64,WHITE);
+          display.setTextColor(BLACK, WHITE);
+         } else {
+          display.setTextColor(WHITE,BLACK);
+         }
       
+      }
+     
       int textSize = 4;
       if (buttonText[currentSong][i].length() < 5) {
         textSize = 5;
