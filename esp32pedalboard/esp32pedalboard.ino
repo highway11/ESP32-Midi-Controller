@@ -38,8 +38,9 @@ const long checkOnTimeInterval = 60000; //60 seconds
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, -1);
 String screenText[] = {"", "", "", "", "","","", ""};
 String buttonText[10][8] = {{"","","","","","","",""},{"","","","","","","",""},{"","","","","","","",""},{"","","","","","","",""},{"","","","","","","",""},{"","","","","","","",""},{"","","","","","","",""},{"","","","","","","",""},{"","","","","","","",""},{"","","","","","","",""}};
-byte buttonState[] = {0,0,0,0,0,0};
+boolean buttonState[] = {true,true,true,true,true,true};
 String songs[] = {"","","","","","","","","",""};
+String connectedMessage = "offline";
 int currentSong = 0;
 int numSongs = 0;
 int x, minX;
@@ -306,7 +307,7 @@ void setup()
   if (nbVisibleNetworks == 0) {
     //Serial.println(F("no networks found. Reset to try again"));
     displayText("no networks found. Reset to try again");
-    while (true); // no need to go further, hang in there, will auto launch the Soft WDT reset
+    //while (true); // no need to go further, hang in there, will auto launch the Soft WDT reset
   }
 
   // ----------------------------------------------------------------
@@ -337,64 +338,67 @@ void setup()
   if (!wifiFound) {
     //Serial.println(F("no Known network identified. Reset to try again"));
     displayText("no Known network identified. Reset to try again");
-    while (true); // no need to go further, hang in there, will auto launch the Soft WDT reset
-  }
-
-  // ----------------------------------------------------------------
-  // if you arrive here you found 1 known SSID
-  // ----------------------------------------------------------------
-  //Serial.print(F("\nConnecting to "));
-  //Serial.println(KNOWN_SSID[n]);
-  displayText(String("Connecting to ") + String(KNOWN_SSID[n]));
-  
-
-  // ----------------------------------------------------------------
-  // We try to connect to the WiFi network we found
-  // ----------------------------------------------------------------
-  
-  // Configures static IP address
-  if (!WiFi.config(KNOWN_STATICIP[n], KNOWN_GATEWAY[n], subnet, primaryDNS, secondaryDNS)) {
-    //Serial.println("Failed to configure static ip");
-    displayText("Failed to configure static ip");
-  }
-  WiFi.begin(KNOWN_SSID[n], KNOWN_PASSWORD[n]);
-
-  while (WiFi.status() != WL_CONNECTED) {
-    delay(1000);
-    //Serial.print(".");
-    displayText("Connecting...");
-  }
-  //Serial.println("");
-
-  // ----------------------------------------------------------------
-  // SUCCESS, you are connected to the known WiFi network
-  // ----------------------------------------------------------------
-  //Serial.println(F("WiFi connected, your IP address is "));
-  //Serial.println(WiFi.localIP());
-  displayText("Connected. IP address is: ");
-  displayText((WiFi.localIP().toString()));
-  doneConnecting = true;
-  disconnected = false;
-  //message = "Connected to Session";
-  message = String(WiFi.localIP().toString() + String(":8888"));
-  
-  if (strcmp(KNOWN_SSID[n],"LL")) {
-    setRGBColor("green");
-    originalColor = "green";
+    doneConnecting = true;
+    disconnected = false;
+    //while (true); // no need to go further, hang in there, will auto launch the Soft WDT reset
   } else {
-    setRGBColor("blue");
-    originalColor = "blue";
-   
-  }
-
-  WiFi.onEvent(WiFiStationConnected, SYSTEM_EVENT_STA_CONNECTED);
-  WiFi.onEvent(WiFiGotIP, SYSTEM_EVENT_STA_GOT_IP);
-  WiFi.onEvent(WiFiStationDisconnected, SYSTEM_EVENT_STA_DISCONNECTED);
-  //------------------------------------------END NEW WIFI CODE----------------------------------------
-
-
-
-  server.begin();
+  
+      // ----------------------------------------------------------------
+      // if you arrive here you found 1 known SSID
+      // ----------------------------------------------------------------
+      //Serial.print(F("\nConnecting to "));
+      //Serial.println(KNOWN_SSID[n]);
+      displayText(String("Connecting to ") + String(KNOWN_SSID[n]));
+      
+    
+      // ----------------------------------------------------------------
+      // We try to connect to the WiFi network we found
+      // ----------------------------------------------------------------
+      
+      // Configures static IP address
+      if (!WiFi.config(KNOWN_STATICIP[n], KNOWN_GATEWAY[n], subnet, primaryDNS, secondaryDNS)) {
+        //Serial.println("Failed to configure static ip");
+        displayText("Failed to configure static ip");
+      }
+      WiFi.begin(KNOWN_SSID[n], KNOWN_PASSWORD[n]);
+    
+      while (WiFi.status() != WL_CONNECTED) {
+        delay(1000);
+        //Serial.print(".");
+        displayText("Connecting...");
+      }
+      //Serial.println("");
+    
+      // ----------------------------------------------------------------
+      // SUCCESS, you are connected to the known WiFi network
+      // ----------------------------------------------------------------
+      //Serial.println(F("WiFi connected, your IP address is "));
+      //Serial.println(WiFi.localIP());
+      displayText("Connected. IP address is: ");
+      displayText((WiFi.localIP().toString()));
+      doneConnecting = true;
+      disconnected = false;
+      //message = "Connected to Session";
+      connectedMessage = String(WiFi.localIP().toString() + String(":8888"));
+      
+      if (strcmp(KNOWN_SSID[n],"LL")) {
+        setRGBColor("green");
+        originalColor = "green";
+      } else {
+        setRGBColor("blue");
+        originalColor = "blue";
+       
+      }
+    
+      WiFi.onEvent(WiFiStationConnected, SYSTEM_EVENT_STA_CONNECTED);
+      WiFi.onEvent(WiFiGotIP, SYSTEM_EVENT_STA_GOT_IP);
+      WiFi.onEvent(WiFiStationDisconnected, SYSTEM_EVENT_STA_DISCONNECTED);
+      //------------------------------------------END NEW WIFI CODE----------------------------------------
+    
+    
+    
+      server.begin();
+  } // if (!wifiFound)
 
   
 }
@@ -475,6 +479,16 @@ void loop()
   //------------Button 4 --------------------------------
   if (debouncer14.fell()) {
     // button pressed so send Note On
+    //switch is toggling velocity on pedalboard mode
+    if (currentSong == 0) {
+      if (buttonState[3] == true) {
+        velocity = 0;
+      } else {
+        velocity = 127;
+      }
+    } else {
+      velocity = 55;
+    }
     midi_note_on(channel,note24,velocity);
     setRGBColor("white");
     //if (disconnected == false) message = buttonText[currentSong][5];
@@ -484,7 +498,7 @@ void loop()
   }
   else if (debouncer14.rose()) {
     // button released so semd Note Off
-    midi_note_off(channel,note24,velocity);
+    //midi_note_off(channel,note24,velocity);
     setRGBColor(originalColor);
     //Serial.println(F("button 4 off"));
   }
@@ -494,6 +508,16 @@ void loop()
   //----------Button 3-------------------
   if (debouncer4.fell()) {
     // button pressed so send Note On
+        //switch is toggling velocity on pedalboard mode
+    if (currentSong == 0) {
+      if (buttonState[2] == true) {
+        velocity = 0;
+      } else {
+        velocity = 127;
+      }
+    } else {
+      velocity = 55;
+    }
     midi_note_on(channel,note23,velocity);
     setRGBColor("white");
     //if (disconnected == false) message = buttonText[currentSong][7];
@@ -503,7 +527,7 @@ void loop()
   }
   else if (debouncer4.rose()) {
     // button released so semd Note Off
-    midi_note_off(channel,note23,velocity);
+    //midi_note_off(channel,note23,velocity);
     setRGBColor(originalColor);
     //Serial.println(F("button 3 off"));
   }
@@ -511,6 +535,16 @@ void loop()
   //----------Button 2 --------------------
   if (debouncer5.fell()) {
     // button pressed so send Note On
+    //switch is toggling velocity on pedalboard mode
+    if (currentSong == 0) {
+      if (buttonState[1] == true) {
+        velocity = 0;
+      } else {
+        velocity = 127;
+      }
+    } else {
+      velocity = 55;
+    }
     midi_note_on(channel,note22,velocity);
     setRGBColor("white");
     //if (disconnected == false) message = buttonText[currentSong][6];
@@ -520,7 +554,7 @@ void loop()
   }
   else if (debouncer5.rose()) {
     // button released so semd Note Off
-    midi_note_off(channel,note22,velocity);
+    //midi_note_off(channel,note22,velocity);
     setRGBColor(originalColor);
     //Serial.println(F("button 2 off"));
   }
@@ -529,6 +563,17 @@ void loop()
   //-------------Button 5----------------------
   if (debouncer13.fell()) {
     // button pressed so send Note On
+    
+    //switch is toggling velocity on pedalboard mode
+    if (currentSong == 0) {
+      if (buttonState[4] == true) {
+        velocity = 0;
+      } else {
+        velocity = 127;
+      }
+    } else {
+      velocity = 55;
+    }
     midi_note_on(channel,note25,velocity);
     setRGBColor("white");
     //if (disconnected == false) message = buttonText[currentSong][1];
@@ -545,6 +590,17 @@ void loop()
   //------------Button 1------------------------
   if (debouncer2.fell()) {
     // button pressed so send Note On
+    
+    //switch is toggling velocity on pedalboard mode
+    if (currentSong == 0) {
+      if (buttonState[0] == true) {
+        velocity = 0;
+      } else {
+        velocity = 127;
+      }
+    } else {
+      velocity = 55;
+    }
     midi_note_on(channel,note21,velocity);
     setRGBColor("white");
     //if (disconnected == false) message = buttonText[currentSong][0];
@@ -561,6 +617,16 @@ void loop()
   //-------------Button 6 -----------------------
   if (debouncer15.fell()) {
     // button pressed so send Note On
+    //switch is toggling velocity on pedalboard mode
+    if (currentSong == 0) {
+      if (buttonState[5] == true) {
+        velocity = 0;
+      } else {
+        velocity = 127;
+      }
+    } else {
+      velocity = 55;
+    }
     midi_note_on(channel,note26,velocity);
     setRGBColor("white");
     //if (disconnected == false) message = buttonText[currentSong][2];
@@ -570,7 +636,7 @@ void loop()
   }
   else if (debouncer15.rose()) {
     // button released so semd Note Off
-    midi_note_off(channel,note26,velocity);
+    //midi_note_off(channel,note26,velocity);
     setRGBColor(originalColor);
     //Serial.println(F("button 6 off"));
   }
@@ -582,9 +648,27 @@ void loop()
     setRGBColor("white");
     lastButton = 9;
     currentSong++;
-    if (currentSong > numSongs -1) currentSong = 0;
-    if (disconnected == false) message = songs[currentSong];
-    updateScreens();
+    if (currentSong > numSongs -1){
+      
+      //song 0 is pedalboard mode. Redraw all screens manually.
+      currentSong = 0;
+      if (disconnected == false) message = songs[currentSong];
+      //redraw all button screens
+      for (int y=0;y<=5;++y) {
+        buttonState[y] = !buttonState[y];
+        lastButton = y;
+        updateScreens();
+      }
+      
+      
+    
+      lastButton = 9;
+    } else {
+      if (disconnected == false) message = songs[currentSong];
+       updateScreens();
+    }
+    //if (disconnected == false) message = songs[currentSong];
+   
     //Serial.println(F("Next Song on"));
   }
   else if (debouncer19.rose()) {
@@ -757,8 +841,9 @@ void loop()
     display.print(message);
     display.setTextSize(1);
     //show onTime
-    display.setCursor(56,56);
-    display.print(String((float)storedOnTime/60/60));
+    display.setCursor(0,56);
+    //display.print(String((float)storedOnTime/60/60));
+    display.print(connectedMessage);
     //draw bar showing expression pedal value on bottom screen
     display.fillRect(0, 55, newExpVal, 10,WHITE);
     display.display();
@@ -964,39 +1049,12 @@ void displayText(String text) {
 
 //update each button screen
 void updateScreens() {
+
+  //Serial.println(F("Updating Screens"));
    
     for (i=0;i<=6;++i) {
       SelectScreen(i+1);
-      display.clearDisplay();
-      display.setTextWrap(true );
-      //show white bar if this button is active
-      display.setCursor(0,0);
-      if (currentSong == 0) {
-        if (lastButton == i) {
-          //the first song is now always pedalboard mode
-            if (buttonState[i] == 0) {
-              //turn background white
-              display.fillRect(0, 0, 128, 64,WHITE);
-              display.setTextColor(BLACK, WHITE);
-              buttonState[i] = 1;
-            } else {
-              //turn background black
-              display.setTextColor(WHITE,BLACK);
-              buttonState[i] = 0;
-            }
-        }
-        
-      } else {
-      //we are in snapshot mode
-         if (lastButton == i) {
-          display.fillRect(0, 0, 128, 64,WHITE);
-          display.setTextColor(BLACK, WHITE);
-         } else {
-          display.setTextColor(WHITE,BLACK);
-         }
-      
-      }
-     
+
       int textSize = 4;
       if (buttonText[currentSong][i].length() < 5) {
         textSize = 5;
@@ -1007,10 +1065,56 @@ void updateScreens() {
       if (buttonText[currentSong][i].length() > 14) {
         textSize = 2;
       }
+      
+      if (currentSong == 0) {
+       //the first song is now always pedalboard mode
+        if (lastButton == i) {
+        //only refresh this screen if the button has been pushed
+          
+            display.clearDisplay();
+            display.setTextWrap(true );
+            display.setCursor(0,0);
+            
+            if (buttonState[i] == false) {
+              //turn background white
+              display.fillRect(0, 0, 128, 64,WHITE);
+              display.setTextColor(BLACK, WHITE);
+              buttonState[i] = true;
+            } else {
+              //turn background black
+              display.fillRect(0, 0, 128, 64,BLACK);
+              display.setTextColor(WHITE,BLACK);
+              buttonState[i] = false;
+            }
+
+            display.setTextSize(textSize);
+            display.setCursor(2,2);
+            display.print(buttonText[currentSong][i]);
+            display.display();
+        }
+        
+      } else {
+      //all other songs are in snapshot mode
+
+       display.clearDisplay();
+       display.setTextWrap(true );
+       display.setCursor(0,0);
+         if (lastButton == i) {
+          display.fillRect(0, 0, 128, 64,WHITE);
+          display.setTextColor(BLACK, WHITE);
+         } else {
+          display.setTextColor(WHITE,BLACK);
+         }
+
       display.setTextSize(textSize);
       display.setCursor(2,2);
       display.print(buttonText[currentSong][i]);
       display.display();
+      
+      }
+     
+      
+      
     }
 }
 
