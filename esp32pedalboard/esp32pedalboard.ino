@@ -37,9 +37,9 @@ const long checkOnTimeInterval = 60000; //60 seconds
 // Declaration for an SSD1306 display connected to I2C (SDA, SCL pins)
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, -1);
 String screenText[] = {"", "", "", "", "","","", ""};
-String buttonText[10][8] = {{"","","","","","","",""},{"","","","","","","",""},{"","","","","","","",""},{"","","","","","","",""},{"","","","","","","",""},{"","","","","","","",""},{"","","","","","","",""},{"","","","","","","",""},{"","","","","","","",""},{"","","","","","","",""}};
+String buttonText[20][8] = {{"","","","","","","",""},{"","","","","","","",""},{"","","","","","","",""},{"","","","","","","",""},{"","","","","","","",""},{"","","","","","","",""},{"","","","","","","",""},{"","","","","","","",""},{"","","","","","","",""},{"","","","","","","",""},{"","","","","","","",""},{"","","","","","","",""},{"","","","","","","",""},{"","","","","","","",""},{"","","","","","","",""},{"","","","","","","",""},{"","","","","","","",""},{"","","","","","","",""},{"","","","","","","",""},{"","","","","","","",""}};
 boolean buttonState[] = {true,true,true,true,true,true};
-String songs[] = {"","","","","","","","","",""};
+String songs[] = {"","","","","","","","","","","","","","","","","","","",""};
 String connectedMessage = "offline";
 int currentSong = 0;
 int numSongs = 0;
@@ -205,7 +205,7 @@ void setup()
   //Get button text from onboard storage
    preferences.begin("pedalboard", false);
   
-  for (int i=1;i<=10;i++) {
+  for (int i=1;i<=20;i++) {
 
     //populate songs
     String stringKey1 = "song" + String(i);
@@ -481,15 +481,20 @@ void loop()
     // button pressed so send Note On
     //switch is toggling velocity on pedalboard mode
     if (currentSong == 0) {
-      if (buttonState[3] == true) {
-        velocity = 0;
-      } else {
-        velocity = 127;
-      }
+      //if (buttonState[3] == true) {
+      //  velocity = 0;
+      //} else {
+      //  velocity = 127;
+      //}
     } else {
       velocity = 55;
     }
-    midi_note_on(channel,note24,velocity);
+    if (currentSong == 0) {
+      midi_note_on(channel,44,velocity);
+    } else {
+      midi_note_on(channel,note24,velocity);
+    }
+    
     setRGBColor("white");
     //if (disconnected == false) message = buttonText[currentSong][5];
     lastButton = 3;
@@ -498,7 +503,9 @@ void loop()
   }
   else if (debouncer14.rose()) {
     // button released so semd Note Off
-    //midi_note_off(channel,note24,velocity);
+    if (currentSong == 0) {
+      midi_note_off(channel,44,velocity);
+    }
     setRGBColor(originalColor);
     //Serial.println(F("button 4 off"));
   }
@@ -509,16 +516,15 @@ void loop()
   if (debouncer4.fell()) {
     // button pressed so send Note On
         //switch is toggling velocity on pedalboard mode
-    if (currentSong == 0) {
-      if (buttonState[2] == true) {
-        velocity = 0;
-      } else {
-        velocity = 127;
-      }
-    } else {
+    
       velocity = 55;
+    
+ 
+    if (currentSong == 0) {
+      midi_note_on(channel,43,velocity);
+    } else {
+      midi_note_on(channel,note23,velocity);
     }
-    midi_note_on(channel,note23,velocity);
     setRGBColor("white");
     //if (disconnected == false) message = buttonText[currentSong][7];
     lastButton = 2;
@@ -527,6 +533,9 @@ void loop()
   }
   else if (debouncer4.rose()) {
     // button released so semd Note Off
+     if (currentSong == 0) {
+      midi_note_off(channel,43,velocity);
+    }
     //midi_note_off(channel,note23,velocity);
     setRGBColor(originalColor);
     //Serial.println(F("button 3 off"));
@@ -536,16 +545,15 @@ void loop()
   if (debouncer5.fell()) {
     // button pressed so send Note On
     //switch is toggling velocity on pedalboard mode
+    
+    velocity = 55;
+    
+   
     if (currentSong == 0) {
-      if (buttonState[1] == true) {
-        velocity = 0;
-      } else {
-        velocity = 127;
-      }
+      midi_note_on(channel,42,velocity);
     } else {
-      velocity = 55;
+      midi_note_on(channel,note22,velocity);
     }
-    midi_note_on(channel,note22,velocity);
     setRGBColor("white");
     //if (disconnected == false) message = buttonText[currentSong][6];
     lastButton = 1;
@@ -555,6 +563,9 @@ void loop()
   else if (debouncer5.rose()) {
     // button released so semd Note Off
     //midi_note_off(channel,note22,velocity);
+    if (currentSong == 0) {
+      midi_note_off(channel,42,velocity);
+    }
     setRGBColor(originalColor);
     //Serial.println(F("button 2 off"));
   }
@@ -565,16 +576,15 @@ void loop()
     // button pressed so send Note On
     
     //switch is toggling velocity on pedalboard mode
+   
+   velocity = 55;
+   
+    
     if (currentSong == 0) {
-      if (buttonState[4] == true) {
-        velocity = 0;
-      } else {
-        velocity = 127;
-      }
+      midi_note_on(channel,45,velocity);
     } else {
-      velocity = 55;
+      midi_note_on(channel,note25,velocity);
     }
-    midi_note_on(channel,note25,velocity);
     setRGBColor("white");
     //if (disconnected == false) message = buttonText[currentSong][1];
     lastButton = 4;
@@ -583,6 +593,9 @@ void loop()
   }
   else if (debouncer13.rose()) {
     // button released so semd Note Off
+    if (currentSong == 0) {
+      midi_note_off(channel,45,velocity);
+    }
     setRGBColor(originalColor);
     //Serial.println(F("button 5 off"));
   }
@@ -592,16 +605,14 @@ void loop()
     // button pressed so send Note On
     
     //switch is toggling velocity on pedalboard mode
+    velocity = 55;
+    
+    
     if (currentSong == 0) {
-      if (buttonState[0] == true) {
-        velocity = 0;
-      } else {
-        velocity = 127;
-      }
+      midi_note_on(channel,41,velocity);
     } else {
-      velocity = 55;
+      midi_note_on(channel,note21,velocity);
     }
-    midi_note_on(channel,note21,velocity);
     setRGBColor("white");
     //if (disconnected == false) message = buttonText[currentSong][0];
     lastButton = 0;
@@ -610,6 +621,9 @@ void loop()
   }
   else if (debouncer2.rose()) {
     // button released so semd Note Off
+    if (currentSong == 0) {
+      midi_note_off(channel,41,velocity);
+    }
     setRGBColor(originalColor);
     //Serial.println(F("button 1  off"));
   }
@@ -618,16 +632,15 @@ void loop()
   if (debouncer15.fell()) {
     // button pressed so send Note On
     //switch is toggling velocity on pedalboard mode
+   
+    velocity = 55;
+    
+    
     if (currentSong == 0) {
-      if (buttonState[5] == true) {
-        velocity = 0;
-      } else {
-        velocity = 127;
-      }
+      midi_note_on(channel,46,velocity);
     } else {
-      velocity = 55;
+      midi_note_on(channel,note26,velocity);
     }
-    midi_note_on(channel,note26,velocity);
     setRGBColor("white");
     //if (disconnected == false) message = buttonText[currentSong][2];
     lastButton = 5;
@@ -637,6 +650,9 @@ void loop()
   else if (debouncer15.rose()) {
     // button released so semd Note Off
     //midi_note_off(channel,note26,velocity);
+    if (currentSong == 0) {
+      midi_note_off(channel,46,velocity);
+    }
     setRGBColor(originalColor);
     //Serial.println(F("button 6 off"));
   }
@@ -704,7 +720,11 @@ void loop()
   //------------Button ? ----------------------
   if (debouncer17.fell()) {
     // button pressed so send Note On
-    midi_note_on(channel,note18,velocity);
+    if (currentSong == 0) {
+      midi_note_on(channel,48,velocity);
+    } else {
+      midi_note_on(channel,note18,velocity);
+    }
     setRGBColor("white");
     //if (disconnected == false) message = buttonText[currentSong][3];
     //lastButton = 3;
@@ -713,7 +733,9 @@ void loop()
   }
   else if (debouncer17.rose()) {
     // button released so semd Note Off
-    midi_note_off(channel,note18,velocity);
+    if (currentSong == 0) {
+      midi_note_off(channel,48,velocity);
+    }
     setRGBColor(originalColor);
     //Serial.println(F("note 17 off"));
   }
@@ -721,7 +743,11 @@ void loop()
   //------------- Button ?-----------------------
   if (debouncer16.fell()) {
     // button pressed so send Note On
-    midi_note_on(channel,note19,velocity);
+    if (currentSong == 0) {
+      midi_note_on(channel,49,velocity);
+    } else {
+      midi_note_on(channel,note19,velocity);
+    }
     setRGBColor("white");
     //if (disconnected == false) message = buttonText[currentSong][4];
     //lastButton = 4;
@@ -730,7 +756,9 @@ void loop()
   }
   else if (debouncer16.rose()) {
     // button released so semd Note Off
-    midi_note_off(channel,note19,velocity);
+    if (currentSong == 0) {
+      midi_note_off(channel,49,velocity);
+    }
     setRGBColor(originalColor);
     //Serial.println(F("note 19 off"));
   }
@@ -740,7 +768,8 @@ void loop()
   newExpVal = map(newExpVal, 0, 4095, 0, 127);
   newExpVal = constrain(newExpVal, 0, 127);
   if (newExpVal != lastExpVal) {
-      midi_note_on(channel,31,newExpVal);
+      //midi_note_on(channel,31,newExpVal);
+      midi_controller_change(channel,16,newExpVal);
       //Serial.println(newExpVal);
       //Serial.println(analogRead(expPin));
   }
@@ -753,7 +782,8 @@ void loop()
   newExp2Val = constrain(newExp2Val, 0, 127);
  
   if (newExp2Val != lastExp2Val) {
-      midi_note_on(channel,32,newExp2Val);
+      //midi_note_on(channel,33,newExp2Val);
+      midi_controller_change(channel,17,newExp2Val);
       newExp2ValPercent = map(newExp2ValPercent, 0, 4095, 0, 100);
       newExp2ValPercent = constrain(newExp2ValPercent, 0, 100);
       message = newExp2ValPercent;
@@ -953,7 +983,7 @@ void loop()
             client.println("<link rel=\"stylesheet\" href=\"https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css\">");
             client.println("</head><body><form action=\"/post\" method=\"post\"><div class=\"container\">");
             client.println("<div class='row'><div class='col-sm-12'><h2>Button Text</h2></div></div>");
-            for (int i=1;i<=10;i++) {
+            for (int i=1;i<=20;i++) {
               client.println("<div class='row'><div class='col-sm-12'><h2>Song " + String(i) + "</h2></div></div>");
               client.println("<div class='form-group row'><div class='input-group col-sm-12 col-md-6'><div class='input-group-prepend'><div class='input-group-text'>Song " + String(i) + "</div></div><input type=\"text\" class='form-control' name=\"song" + String(i) + "\" value=\"" + songs[i-1] + "\"/></div></div>");
                for (int x=1;x<=8;x++) {
