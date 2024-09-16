@@ -79,6 +79,7 @@ Bounce debouncer16 = Bounce();
 Bounce debouncer17 = Bounce();
 Bounce debouncer18 = Bounce();
 Bounce debouncer19 = Bounce();
+Bounce debouncer27 = Bounce();
 
 // Red, green, and blue pins for PWM control
 const int redPin = 25;     // 13 corresponds to GPIO13
@@ -97,8 +98,8 @@ const int resolution = 256;
 
 
 // DEFINE HERE THE KNOWN NETWORKS
-const char* KNOWN_SSID[] = {"LL", "TellMyWifiLover","CoSWTP"};
-const char* KNOWN_PASSWORD[] = {"billow11", "billow11","660MainStreet"};
+const char* KNOWN_SSID[] = {"LL", "TellMyWifiLover","CoS"};
+const char* KNOWN_PASSWORD[] = {"password", "password","password"};
 const IPAddress KNOWN_STATICIP[] = {IPAddress(192,168,137,20), IPAddress(192,168,100,20), IPAddress(192,168,50,20)};
 const IPAddress KNOWN_GATEWAY[] = {IPAddress(192,168,137,1), IPAddress(192,168,100,1), IPAddress(192,168,50,1)};
 boolean wifiFound = false;
@@ -282,6 +283,10 @@ void setup()
   debouncer19.attach(19);
   debouncer19.interval(5); // interval in ms
 
+  pinMode(27, INPUT_PULLUP);
+  debouncer27.attach(27);
+  debouncer27.interval(5); // interval in ms
+
   // configure LED PWM resolution/range and set pins to LOW
   analogWrite(redPin, 0);
   analogWrite(greenPin, 0);
@@ -451,6 +456,7 @@ void loop()
   debouncer17.update();
   debouncer18.update();
   debouncer19.update();
+  debouncer27.update();
   
  
   
@@ -675,9 +681,41 @@ void loop()
         lastButton = y;
         updateScreens();
       }
+      lastButton = 9;
+    } else {
+      if (disconnected == false) message = songs[currentSong];
+       updateScreens();
+    }
+    //if (disconnected == false) message = songs[currentSong];
+   
+    //Serial.println(F("Next Song on"));
+  }
+  else if (debouncer19.rose()) {
+    // button released so send Note Off
+    midi_note_off(channel,note16,velocity);
+    setRGBColor(originalColor);
+    //Serial.println(F("Next Song off"));
+  }
+
+
+    //-------------Button 11 PREVIOUS SONG-----------------------
+  if (debouncer19.fell()) {
+    // button pressed so send Note On
+    midi_note_on(channel,note16,velocity);
+    setRGBColor("white");
+    lastButton = 10;
+    currentSong--;
+    if (currentSong > numSongs -1){
       
-      
-    
+      //song 0 is pedalboard mode. Redraw all screens manually.
+      currentSong = 0;
+      if (disconnected == false) message = songs[currentSong];
+      //redraw all button screens
+      for (int y=0;y<=5;++y) {
+        buttonState[y] = !buttonState[y];
+        lastButton = y;
+        updateScreens();
+      }
       lastButton = 9;
     } else {
       if (disconnected == false) message = songs[currentSong];
