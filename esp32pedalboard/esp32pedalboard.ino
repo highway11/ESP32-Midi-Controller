@@ -4,6 +4,9 @@
 #include <WiFiUdp.h>
 #include <analogWrite.h>
 
+//Use this to format preferences storage if there's an issue
+#include <nvs_flash.h>
+
 #include <HttpRequest.h>
 #include <Preferences.h>
 
@@ -101,7 +104,7 @@ const int resolution = 256;
 const char* KNOWN_SSID[] = {"LL", "TellMyWifiLover","CoS"};
 const char* KNOWN_PASSWORD[] = {"password", "password","password"};
 const IPAddress KNOWN_STATICIP[] = {IPAddress(192,168,137,20), IPAddress(192,168,100,20), IPAddress(192,168,50,20)};
-const IPAddress KNOWN_GATEWAY[] = {IPAddress(192,168,137,1), IPAddress(192,168,100,1), IPAddress(192,168,50,1)};
+const IPAddress KNOWN_GATEWAY[] = {IPAddress(192,168,137,1), IPAddress(192,168,100,254), IPAddress(192,168,50,1)};
 boolean wifiFound = false;
 int i, n;
 
@@ -200,11 +203,26 @@ void setup()
 
   
   //Get time on from onboard storage
-  preferences.begin("pedalboard", false);
-  storedOnTime = preferences.getULong("ontime", 0);
+  //storedOnTime = preferences.getULong("ontime", 0);
   
-  //Get button text from onboard storage
-   preferences.begin("pedalboard", false);
+  
+
+   //DEBUG Preferences Not Saving
+   //Use this to format preferences storage if there's an issue
+   //nvs_flash_erase(); // erase the NVS partition and...
+   //nvs_flash_init(); // initialize the NVS partition.
+   //preferences.begin("debug", false);
+   //preferences.clear();
+   //Checking if preferences can be saved
+   //Serial.println("saving debug data");
+   //preferences.putString("saveTest","SaveWorkedIfYouSeeThis");
+   //Serial.println("Retrieving Data");
+   //Serial.println(preferences.getString("saveTest",""));
+
+  
+  //Get song and button text from onboard storage
+  //Data is stored in preferences "pedalboard" namespace
+  preferences.begin("pedalboard", false);
   
   for (int i=1;i<=20;i++) {
 
@@ -415,16 +433,16 @@ void loop()
 {
 
    
-  //update stored on time---------------------------------------------------------------------
+  //update stored on time NO LONGER TRACKING ON TIME---------------------------------------------------------------------
   currentTime = millis();
-  if (currentTime - lastCheckTime > checkOnTimeInterval) {
-    lastCheckTime = currentTime;
+  //if (currentTime - lastCheckTime > checkOnTimeInterval) {
+    //lastCheckTime = currentTime;
     //update stored on time variable
-    storedOnTime = storedOnTime + (checkOnTimeInterval / 1000); //store time elapsed in seconds
-    preferences.putULong("ontime",storedOnTime);
+    //storedOnTime = storedOnTime + (checkOnTimeInterval / 1000); //store time elapsed in seconds
+    //preferences.putULong("ontime",storedOnTime);
     //Serial.print("Stored On Time: ");
     //Serial.println(storedOnTime);
-  }
+  //}
    
    unsigned long currentMillis = millis();
 
@@ -479,6 +497,7 @@ void loop()
   byte note17 = 28; //8
   byte note18 = 29; //9
   byte note19 = 30; //10
+  byte note31 = 31; //11
 
   
  
@@ -673,14 +692,9 @@ void loop()
     if (currentSong > numSongs -1){
       
       //song 0 is pedalboard mode. Redraw all screens manually.
-      currentSong = 0;
+      currentSong = numSongs -1;
       if (disconnected == false) message = songs[currentSong];
-      //redraw all button screens
-      for (int y=0;y<=5;++y) {
-        buttonState[y] = !buttonState[y];
-        lastButton = y;
-        updateScreens();
-      }
+     
       lastButton = 9;
     } else {
       if (disconnected == false) message = songs[currentSong];
@@ -699,16 +713,16 @@ void loop()
 
 
     //-------------Button 11 PREVIOUS SONG-----------------------
-  if (debouncer19.fell()) {
+  if (debouncer27.fell()) {
     // button pressed so send Note On
-    midi_note_on(channel,note16,velocity);
+    midi_note_on(channel,note31,velocity);
     setRGBColor("white");
     lastButton = 10;
     currentSong--;
-    if (currentSong > numSongs -1){
+    if (currentSong == 0){
       
       //song 0 is pedalboard mode. Redraw all screens manually.
-      currentSong = 0;
+      
       if (disconnected == false) message = songs[currentSong];
       //redraw all button screens
       for (int y=0;y<=5;++y) {
@@ -718,6 +732,10 @@ void loop()
       }
       lastButton = 9;
     } else {
+      //stay on first song if we are trying to go back. We are no longer cycling through
+      if (currentSong < 0) {
+        currentSong = 0;
+      }
       if (disconnected == false) message = songs[currentSong];
        updateScreens();
     }
@@ -725,9 +743,9 @@ void loop()
    
     //Serial.println(F("Next Song on"));
   }
-  else if (debouncer19.rose()) {
+  else if (debouncer27.rose()) {
     // button released so send Note Off
-    midi_note_off(channel,note16,velocity);
+    midi_note_off(channel,note31,velocity);
     setRGBColor(originalColor);
     //Serial.println(F("Next Song off"));
   }
@@ -942,7 +960,7 @@ void loop()
       if (client.available()) {             // if there's bytes to read from the client,
         char c = client.read();             // read a byte, then
         httpReq.parseRequest(c);
-        Serial.write(c);                    // print it out the serial monitor
+        //Serial.write(c);                    // print it out the serial monitor
         header += c;
                 //IF request has ended -> handle response
         if (httpReq.endOfRequest()) {
@@ -952,16 +970,28 @@ void loop()
           client.println("Connnection: close");
           client.println();
 
+
+
           if (httpReq.paramCount > 0) numSongs = 0;
           int songNum, btnNum;
           String substr;
-          
+
+                  
             for(int i=1;i<=httpReq.paramCount;i++){
               httpReq.getParam(i,name,value);
               //Serial.print(name);
               //Serial.print(" - ");
               //Serial.print(value);
               //Serial.println("");
+
+              if (String(name).indexOf("clearStorage") >= 0) {
+                if (String(value).indexOf("yes") >= 0) {
+                //Use this to format preferences storage if there's an issue
+                nvs_flash_erase(); // erase the NVS partition and...
+                nvs_flash_init(); // initialize the NVS partition.
+                ESP.restart(); //Restart the esp device
+                }
+              }
 
               if (String(name).indexOf("btn") >= 0) {
                 String text = String(value);
@@ -1019,13 +1049,14 @@ void loop()
             client.println("<head><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">");
             client.println("<link rel=\"icon\" href=\"data:,\">");
             client.println("<link rel=\"stylesheet\" href=\"https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css\">");
-            client.println("</head><body><form action=\"/post\" method=\"post\"><div class=\"container\">");
+            client.println("</head><body><form action=\"/post\" name=\"form\" id=\"form\" method=\"post\"><div class=\"container\">");
             client.println("<div class='row'><div class='col-sm-12'><h2>Button Text</h2></div></div>");
+            client.println("<div class='form-group row'><div class='col-sm-10'><input class='btn btn-primary btn-lg' type=\"button\" value=\"Export Setlist To JSON\" onClick=\"saveSongs(); \"></div></div> ");
             for (int i=1;i<=20;i++) {
               client.println("<div class='row'><div class='col-sm-12'><h2>Song " + String(i) + "</h2></div></div>");
-              client.println("<div class='form-group row'><div class='input-group col-sm-12 col-md-6'><div class='input-group-prepend'><div class='input-group-text'>Song " + String(i) + "</div></div><input type=\"text\" class='form-control' name=\"song" + String(i) + "\" value=\"" + songs[i-1] + "\"/></div></div>");
+              client.println("<div class='form-group row'><div class='input-group col-sm-12 col-md-6'><div class='input-group-prepend'><div class='input-group-text'>Song " + String(i) + "</div></div><input type=\"text\" class='form-control' name=\"song" + String(i) + "\" id=\"song" + String(i) + "\" value=\"" + songs[i-1] + "\"/></div></div>");
                for (int x=1;x<=8;x++) {
-                  client.println("<div class='form-group row'><div class='input-group col-sm-12 col-md-6'><div class='input-group-prepend'><div class='input-group-text'>" + String(x) + "</div></div><input type=\"text\" class='form-control' name=\"btn" + getPadded(i) + getPadded(x) + "\" value=\"" + buttonText[i-1][x-1] + "\"/></div></div>");
+                  client.println("<div class='form-group row'><div class='input-group col-sm-12 col-md-6'><div class='input-group-prepend'><div class='input-group-text'>" + String(x) + "</div></div><input type=\"text\" class='form-control' name=\"btn" + getPadded(i) + getPadded(x) + "\" id=\"btn" + getPadded(i) + getPadded(x) + "\" value=\"" + buttonText[i-1][x-1] + "\"/></div></div>");
             
               }
            }
@@ -1033,7 +1064,28 @@ void loop()
            
             client.println("<div class='form-group row'><label class='col-xs-2 col-form-label'>On Time (hours)</label><div class='col-xs-10'><input type=\"text\" class='form-control' name=\"onTime\" value=\"" + String((float)storedOnTime/60/60) + "\"/></div></div>");
             client.println("<div class='form-group row'><div class='col-sm-10'><input class='btn btn-primary btn-lg' type=\"submit\" value=\"Update Settings\"></div></div> ");
-            client.println("</form></body></html>");
+            client.println("<div class='form-group row'><div class='col-sm-10'><input class='btn btn-danger btn-lg' type=\"button\" value=\"Clear Storage\" onClick=\"document.getElementById('clearStorage').value='yes';document.getElementById('form').submit();\"></div></div> ");
+            client.println("<input type='hidden' id='clearStorage' name='clearStorage' value='no'>");
+                            
+                            
+                          
+                            
+
+            client.println("</form>");
+            client.println("<br/><br/>Upload Setlist: ");
+            client.println("<input id=\"file\" type=\"file\" />");
+
+            //Add Script to export and import setlists
+            client.println("<script>");
+            client.println("const JSONToFile = (obj, filename) => {const blob = new Blob([JSON.stringify(obj, null, 2)], {type: 'application/json',}); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = `${filename}.json`; a.click();  URL.revokeObjectURL(url); };");
+            client.println(" function saveSongs() { var formData = new FormData(document.querySelector('form')); var object = {}; formData.forEach(function(value, key){ object[key] = value; }); var json = JSON.stringify(object); JSONToFile(json, 'setlist'); }");
+            client.println(" var uploadedJSON;");
+            client.println(" function onFileSelect(event) { var reader = new FileReader(); reader.onload = onReaderLoad; reader.readAsText(event.target.files[0]); }");
+            client.println(" function onReaderLoad(event){ console.log(event.target.result); var x = JSON.parse(event.target.result); uploadedJSON = JSON.parse(x); Object.entries(uploadedJSON).forEach((entry) => { const [key, value] = entry; if (key != \"onTime\") { document.getElementById(key).value = value; }}); }");
+            client.println(" document.getElementById('file').addEventListener('change', onFileSelect);");
+            client.println("</script");                
+            
+            client.println("</body></html>");
             // The HTTP response ends with another blank line
             client.println();
             
