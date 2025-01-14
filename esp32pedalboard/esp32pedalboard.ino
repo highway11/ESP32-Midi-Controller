@@ -3,6 +3,7 @@
 #include <WiFiClient.h>
 #include <WiFiUdp.h>
 #include <analogWrite.h>
+#include <ArduinoOTA.h>
 
 //Use this to format preferences storage if there's an issue
 #include <nvs_flash.h>
@@ -40,7 +41,8 @@ const long checkOnTimeInterval = 60000; //60 seconds
 // Declaration for an SSD1306 display connected to I2C (SDA, SCL pins)
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, -1);
 String screenText[] = {"", "", "", "", "","","", ""};
-String buttonText[20][8] = {{"","","","","","","",""},{"","","","","","","",""},{"","","","","","","",""},{"","","","","","","",""},{"","","","","","","",""},{"","","","","","","",""},{"","","","","","","",""},{"","","","","","","",""},{"","","","","","","",""},{"","","","","","","",""},{"","","","","","","",""},{"","","","","","","",""},{"","","","","","","",""},{"","","","","","","",""},{"","","","","","","",""},{"","","","","","","",""},{"","","","","","","",""},{"","","","","","","",""},{"","","","","","","",""},{"","","","","","","",""}};
+//String buttonText[25][6] = {{"","","","","",""},{"","","","","",""},{"","","","","",""},{"","","","","",""},{"","","","","",""},{"","","","","",""},{"","","","","",""},{"","","","","",""},{"","","","","",""},{"","","","","","",},{"","","","","",""},{"","","","","",""},{"","","","","",""},{"","","","","",""},{"","","","","",""},{"","","","","",""},{"","","","","",""},{"","","","","",""},{"","","","","",""},{"","","","","",""},{"","","","","",""},{"","","","","",""},{"","","","","",""},{"","","","","",""},{"","","","","",""}};
+String buttonText[25][6];
 boolean buttonState[] = {true,true,true,true,true,true};
 String songs[] = {"","","","","","","","","","","","","","","","","","","",""};
 String connectedMessage = "offline";
@@ -103,7 +105,7 @@ const int resolution = 256;
 // DEFINE HERE THE KNOWN NETWORKS
 const char* KNOWN_SSID[] = {"LL", "TellMyWifiLover","CoS"};
 const char* KNOWN_PASSWORD[] = {"password", "password","password"};
-const IPAddress KNOWN_STATICIP[] = {IPAddress(192,168,137,20), IPAddress(192,168,100,20), IPAddress(192,168,50,20)};
+const IPAddress KNOWN_STATICIP[] = {IPAddress(192,168,137,20), IPAddress(192,168,100,22), IPAddress(192,168,50,20)};
 const IPAddress KNOWN_GATEWAY[] = {IPAddress(192,168,137,1), IPAddress(192,168,100,254), IPAddress(192,168,50,1)};
 boolean wifiFound = false;
 int i, n;
@@ -174,6 +176,9 @@ void setup()
    Serial.begin(115200);
    //DBG("Booting");
 
+
+
+  
   //---------------------initialize oled displays---------------------------------------
   //Serial.println("Initializing OLED Displays");
   // Start I2C communication with the Multiplexer
@@ -421,7 +426,40 @@ void setup()
     
     
       server.begin();
+
+
+         //Begin OTA Code -----------------------------------------------------------
+     ArduinoOTA
+    .onStart([]() {
+      String type;
+      if (ArduinoOTA.getCommand() == U_FLASH)
+        type = "sketch";
+      else // U_SPIFFS
+        type = "filesystem";
+
+      // NOTE: if updating SPIFFS this would be the place to unmount SPIFFS using SPIFFS.end()
+      Serial.println("Start updating " + type);
+    })
+    .onEnd([]() {
+      Serial.println("\nEnd");
+    })
+    .onProgress([](unsigned int progress, unsigned int total) {
+      Serial.printf("Progress: %u%%\r", (progress / (total / 100)));
+    })
+    .onError([](ota_error_t error) {
+      Serial.printf("Error[%u]: ", error);
+      if (error == OTA_AUTH_ERROR) Serial.println("Auth Failed");
+      else if (error == OTA_BEGIN_ERROR) Serial.println("Begin Failed");
+      else if (error == OTA_CONNECT_ERROR) Serial.println("Connect Failed");
+      else if (error == OTA_RECEIVE_ERROR) Serial.println("Receive Failed");
+      else if (error == OTA_END_ERROR) Serial.println("End Failed");
+    });
+
+  ArduinoOTA.begin();
+  //END OTA CODE --------------------------------------------------------------------------------
   } // if (!wifiFound)
+
+  
 
   
 }
@@ -431,6 +469,8 @@ void setup()
 // -----------------------------------------------------------------------------
 void loop()
 {
+
+  ArduinoOTA.handle();
 
    
   //update stored on time NO LONGER TRACKING ON TIME---------------------------------------------------------------------
@@ -948,7 +988,7 @@ void loop()
   //Wifi Server for button text code --------------------------------------------------
   WiFiClient client = server.available();   // Listen for incoming clients
    //declare name and value to use the request parameters and cookies
-  char name[16], value[50];
+  char name[16], value[25];
 
     if (client) {                             // If a new client connects,
     currentTime = millis();
@@ -1040,22 +1080,23 @@ void loop()
                 storedOnTime = int(atof(value) * 60 * 60);
                 //Serial.print("updated onTime: ");
                 //Serial.println(storedOnTime); 
-                preferences.putULong("ontime",storedOnTime);
+                //preferences.putULong("ontime",storedOnTime);
               }
             }
 
+            
             // Display the HTML web page
             client.println("<!DOCTYPE html><html>");
             client.println("<head><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">");
             client.println("<link rel=\"icon\" href=\"data:,\">");
             client.println("<link rel=\"stylesheet\" href=\"https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css\">");
             client.println("</head><body><form action=\"/post\" name=\"form\" id=\"form\" method=\"post\"><div class=\"container\">");
-            client.println("<div class='row'><div class='col-sm-12'><h2>Button Text</h2></div></div>");
+            client.println("<div class='row'><div class='col-sm-12'><h2>Buttons Text</h2></div></div>");
             client.println("<div class='form-group row'><div class='col-sm-10'><input class='btn btn-primary btn-lg' type=\"button\" value=\"Export Setlist To JSON\" onClick=\"saveSongs(); \"></div></div> ");
-            for (int i=1;i<=20;i++) {
+            for (int i=1;i<=25;i++) {
               client.println("<div class='row'><div class='col-sm-12'><h2>Song " + String(i) + "</h2></div></div>");
               client.println("<div class='form-group row'><div class='input-group col-sm-12 col-md-6'><div class='input-group-prepend'><div class='input-group-text'>Song " + String(i) + "</div></div><input type=\"text\" class='form-control' name=\"song" + String(i) + "\" id=\"song" + String(i) + "\" value=\"" + songs[i-1] + "\"/></div></div>");
-               for (int x=1;x<=8;x++) {
+               for (int x=1;x<=6;x++) {
                   client.println("<div class='form-group row'><div class='input-group col-sm-12 col-md-6'><div class='input-group-prepend'><div class='input-group-text'>" + String(x) + "</div></div><input type=\"text\" class='form-control' name=\"btn" + getPadded(i) + getPadded(x) + "\" id=\"btn" + getPadded(i) + getPadded(x) + "\" value=\"" + buttonText[i-1][x-1] + "\"/></div></div>");
             
               }
