@@ -44,7 +44,7 @@ String screenText[] = {"", "", "", "", "","","", ""};
 //String buttonText[25][6] = {{"","","","","",""},{"","","","","",""},{"","","","","",""},{"","","","","",""},{"","","","","",""},{"","","","","",""},{"","","","","",""},{"","","","","",""},{"","","","","",""},{"","","","","","",},{"","","","","",""},{"","","","","",""},{"","","","","",""},{"","","","","",""},{"","","","","",""},{"","","","","",""},{"","","","","",""},{"","","","","",""},{"","","","","",""},{"","","","","",""},{"","","","","",""},{"","","","","",""},{"","","","","",""},{"","","","","",""},{"","","","","",""}};
 String buttonText[25][6];
 boolean buttonState[] = {true,true,true,true,true,true};
-String songs[] = {"","","","","","","","","","","","","","","","","","","",""};
+String songs[] = {"","","","","","","","","","","","","","","","","","","","","","","","",""};
 String connectedMessage = "offline";
 int currentSong = 0;
 int numSongs = 0;
@@ -104,7 +104,6 @@ const int resolution = 256;
 
 // DEFINE HERE THE KNOWN NETWORKS
 const char* KNOWN_SSID[] = {"LL", "TellMyWifiLover","CoS"};
-const char* KNOWN_PASSWORD[] = {"password", "password","password"};
 const IPAddress KNOWN_STATICIP[] = {IPAddress(192,168,137,20), IPAddress(192,168,100,22), IPAddress(192,168,50,20)};
 const IPAddress KNOWN_GATEWAY[] = {IPAddress(192,168,137,1), IPAddress(192,168,100,254), IPAddress(192,168,50,1)};
 boolean wifiFound = false;
@@ -229,7 +228,7 @@ void setup()
   //Data is stored in preferences "pedalboard" namespace
   preferences.begin("pedalboard", false);
   
-  for (int i=1;i<=20;i++) {
+  for (int i=1;i<=25;i++) {
 
     //populate songs
     String stringKey1 = "song" + String(i);
@@ -247,7 +246,7 @@ void setup()
     String stringKey = "btn" + getPadded(i);
     char key[6];
     stringKey.toCharArray(key,6);
-    for (int x=1;x<=8;x++) {
+    for (int x=1;x<=6;x++) {
       String newStringKey = stringKey + getPadded(x);
       
       char newKey[8];
@@ -1036,6 +1035,10 @@ void loop()
               if (String(name).indexOf("btn") >= 0) {
                 String text = String(value);
                 text.replace(String("+"),String(" "));
+                //Serial.print("Putstring: ");
+                //Serial.print(name);
+                //Serial.print(" : ");
+                //Serial.println(text);
                 preferences.putString(name,text);
                 songNum = String(name).substring(3,5).toInt();
                 btnNum = String(name).substring(5,7).toInt();
@@ -1048,6 +1051,10 @@ void loop()
                 //first param is glitched with a leading carriage return! hacky fix
                 if (name[0] == 's') {
                   preferences.putString(name,text);
+                  //Serial.print("Putstring: ");
+                  //Serial.print(name);
+                  //Serial.print(" : ");
+                  //Serial.println(text);
                 } else {
                   char fixedName[6];
                   fixedName[0] = name[1];
@@ -1057,6 +1064,10 @@ void loop()
                   fixedName[4] = name[5];
                   fixedName[5] = '\0'; // The terminating NULL
                   preferences.putString(fixedName,text);
+                  //Serial.print("Putstring: ");
+                  //Serial.print(fixedName);
+                  //Serial.print(" : ");
+                  //Serial.println(text);
                 }
                 
                
@@ -1095,7 +1106,7 @@ void loop()
             client.println("<div class='form-group row'><div class='col-sm-10'><input class='btn btn-primary btn-lg' type=\"button\" value=\"Export Setlist To JSON\" onClick=\"saveSongs(); \"></div></div> ");
             for (int i=1;i<=25;i++) {
               client.println("<div class='row'><div class='col-sm-12'><h2>Song " + String(i) + "</h2></div></div>");
-              client.println("<div class='form-group row'><div class='input-group col-sm-12 col-md-6'><div class='input-group-prepend'><div class='input-group-text'>Song " + String(i) + "</div></div><input type=\"text\" class='form-control' name=\"song" + String(i) + "\" id=\"song" + String(i) + "\" value=\"" + songs[i-1] + "\"/></div></div>");
+              client.println("<div class='form-group row'><div class='input-group col-sm-12 col-md-6'><div class='input-group-prepend'><div class='input-group-text'>Song " + String(i) + "</div></div><input type=\"text\" class='form-control' name=\"song" + String(i) + "\" id=\"song" + String(i) + "\" value=\"" + songs[i-1] + "\"/> <input onclick=\"move(" + String(i) + ",-1)\" class=\"btn btn-secondary\" type=\"button\" value=\"UP\" /> <input onclick=\"move(" + String(i) + ",1)\" class=\"btn btn-secondary\" type=\"button\" value=\"DWN\" />  </div></div>");
                for (int x=1;x<=6;x++) {
                   client.println("<div class='form-group row'><div class='input-group col-sm-12 col-md-6'><div class='input-group-prepend'><div class='input-group-text'>" + String(x) + "</div></div><input type=\"text\" class='form-control' name=\"btn" + getPadded(i) + getPadded(x) + "\" id=\"btn" + getPadded(i) + getPadded(x) + "\" value=\"" + buttonText[i-1][x-1] + "\"/></div></div>");
             
@@ -1123,6 +1134,7 @@ void loop()
             client.println(" var uploadedJSON;");
             client.println(" function onFileSelect(event) { var reader = new FileReader(); reader.onload = onReaderLoad; reader.readAsText(event.target.files[0]); }");
             client.println(" function onReaderLoad(event){ console.log(event.target.result); var x = JSON.parse(event.target.result); uploadedJSON = JSON.parse(x); Object.entries(uploadedJSON).forEach((entry) => { const [key, value] = entry; if (key != \"onTime\") { document.getElementById(key).value = value; }}); }");
+            client.println(" function move(num, direction) { const songName = document.getElementById(\"song\" + num).value; const songName2 = document.getElementById(\"song\" + (num + direction)).value; document.getElementById(\"song\" + num).value = songName2; document.getElementById(\"song\" + (num + direction)).value = songName; for (let i = 1; i <= 6; i++) { const n = (\"0\" + num).slice(-2); const n2 = (\"0\" + (num + direction)).slice(-2); const ii = (\"0\" + i).slice(-2); const btn = document.getElementById(\"btn\" + n + ii).value; const btn2 = document.getElementById(\"btn\" + n2 + ii).value;    document.getElementById(\"btn\" + n + ii).value = btn2;    document.getElementById(\"btn\" + n2 + ii).value = btn;  }}");
             client.println(" document.getElementById('file').addEventListener('change', onFileSelect);");
             client.println("</script");                
             
