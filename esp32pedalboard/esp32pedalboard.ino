@@ -104,7 +104,8 @@ const int resolution = 256;
 
 // DEFINE HERE THE KNOWN NETWORKS
 const char* KNOWN_SSID[] = {"LL", "TellMyWifiLover","CoS"};
-const IPAddress KNOWN_STATICIP[] = {IPAddress(192,168,137,20), IPAddress(192,168,100,22), IPAddress(192,168,50,20)};
+const char* KNOWN_PASSWORD[] = {"password","password","password"};
+const IPAddress KNOWN_STATICIP[] = {IPAddress(192,168,137,20), IPAddress(192,168,100,28), IPAddress(192,168,50,20)};
 const IPAddress KNOWN_GATEWAY[] = {IPAddress(192,168,137,1), IPAddress(192,168,100,254), IPAddress(192,168,50,1)};
 boolean wifiFound = false;
 int i, n;
@@ -387,7 +388,7 @@ void setup()
         //Serial.println("Failed to configure static ip");
         displayText("Failed to configure static ip");
       }
-      WiFi.begin(KNOWN_SSID[n], KNOWN_PASSWORD[n]);
+      WiFi.begin(KNOWN_SSID[n],KNOWN_PASSWORD[n]);
     
       while (WiFi.status() != WL_CONNECTED) {
         delay(1000);
@@ -463,13 +464,68 @@ void setup()
   
 }
 
-// -----------------------------------------------------------------------------
-//
-// -----------------------------------------------------------------------------
+
+// Function to process incoming MIDI messages from USB Serial (Hairless MIDI)
+void processMidiInput() {
+    static byte incomingByte;
+    static byte statusByte = 0;
+    static byte dataByte1 = 0;
+    static int messageState = 0; // 0: waiting for status, 1: data1, 2: data2
+
+    while (Serial.available() > 0) { // Read from main USB Serial
+        incomingByte = Serial.read(); // Read from main USB Serial
+
+        if (incomingByte >= 0xF8) { // Real-time messages
+            continue;
+        } else if (incomingByte >= 0xF0) { // System Common messages
+            messageState = 0;
+            statusByte = 0;
+            continue;
+        } else if (incomingByte >= 0x80) { // Status byte
+            statusByte = incomingByte;
+            messageState = 1;
+        } else if (statusByte != 0) { // Data byte
+            if (messageState == 1) {
+                dataByte1 = incomingByte;
+                messageState = 2;
+            } else if (messageState == 2) { // dataByte2 = incomingByte
+                byte command = statusByte & 0xF0;
+                byte midiChannel = statusByte & 0x0F;
+
+                // Check for Note On on MIDI Channel 3 (0-indexed channel 2)
+                // Velocity > 0 for Note On
+                if (command == 0x90 && midiChannel == 2 && incomingByte > 0) { // incomingByte is velocity here
+                    int newSongCandidate = dataByte1; // Note number
+
+                    if (newSongCandidate >= 0 && newSongCandidate < numSongs) {
+                        currentSong = newSongCandidate;
+                        // Serial.print("MIDI via USB: Set currentSong to "); Serial.println(currentSong);
+                        // Serial.print("Song Name: "); Serial.println(songs[currentSong]);
+
+                        message = songs[currentSong]; // Update main display message
+                        lastButton = -1; // Indicate change not from a footswitch
+                        updateScreens(); // Refresh displays
+
+                        //setRGBColor("white");
+                        delay(50);
+                        //setRGBColor(originalColor);
+                    } else {
+                        // Serial.print("MIDI via USB: Note number "); Serial.print(newSongCandidate);
+                        // Serial.print(" out of range for numSongs: "); Serial.println(numSongs);
+                    }
+                }
+                messageState = 1; // Ready for next dataByte1 (running status) or new status byte
+            }
+        }
+    }
+}
+
 void loop()
 {
 
   ArduinoOTA.handle();
+
+  processMidiInput();
 
    
   //update stored on time NO LONGER TRACKING ON TIME---------------------------------------------------------------------
