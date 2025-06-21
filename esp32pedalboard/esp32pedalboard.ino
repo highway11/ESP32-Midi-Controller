@@ -5,6 +5,9 @@
 #include <analogWrite.h>
 #include <ArduinoOTA.h>
 
+
+
+
 //Use this to format preferences storage if there's an issue
 #include <nvs_flash.h>
 
@@ -57,6 +60,134 @@ boolean disconnected = false;
 boolean tunerActive = false;
 int lastButton = 0;
 
+
+//New code to receive Sysex MIDI ------------------------------------------------------------
+
+#define SYSEX_BUFFER_MAX_LENGTH 128 // Maximum SysEx data bytes (between F0 & F7) we can handle
+byte sysexBuffer[SYSEX_BUFFER_MAX_LENGTH];
+int sysexBytesReceived = 0;
+bool inSysexMessage = false;
+
+// Your SysEx Protocol Constants (numeric byte values)
+const byte PEDALBOARD_MANUF_ID_FROM_GP = 0x7D;
+const byte PEDALBOARD_DEVICE_ID_FROM_GP = 0x01;
+const byte CMD_SET_SONG_NAME_FROM_GP = 0x01;
+const byte CMD_SET_BUTTON_NAME_FROM_GP = 0x02;
+
+// Maximum length for song/button names stored on ESP32 (affects char buffer for parsing)
+// This should accommodate the longest name you expect, plus null terminator.
+// Your GP script truncates to 30, so 30 + 1 for null is safe.
+const int MAX_NAME_LENGTH_FROM_SYSEX = 31; 
+// ---------------------------------------------------------------------------
+
+// This function will be called when a complete SysEx message (F0...F7) has been received
+// The sysexBuffer will contain the data *between* F0 and F7.
+// sysexBytesReceived will be the count of these data bytes.
+// ---------------------------------------------------------------------------
+void parseAndApplySysex() {
+    if (sysexBytesReceived < 4) { /* ... */ return; }
+    if (sysexBuffer[0] != PEDALBOARD_MANUF_ID_FROM_GP || sysexBuffer[1] != PEDALBOARD_DEVICE_ID_FROM_GP) { /* ... */ return; }
+
+    byte command = sysexBuffer[2];
+    byte songIdx = sysexBuffer[3];
+
+    if (songIdx >= 25) { /* ... */ return; }
+
+    char nameBuffer[MAX_NAME_LENGTH_FROM_SYSEX];
+    int textStartIndex;
+    int actualTextLengthInPayload;
+
+    if (command == CMD_SET_SONG_NAME_FROM_GP) {
+        textStartIndex = 4;
+        if (sysexBytesReceived < textStartIndex) {
+             songs[songIdx] = ""; 
+        } else {
+            actualTextLengthInPayload = sysexBytesReceived - textStartIndex;
+            int charsToCopy = 0;
+            for (int k = 0; k < actualTextLengthInPayload; k++) {
+                if (charsToCopy < MAX_NAME_LENGTH_FROM_SYSEX - 1) {
+                    nameBuffer[charsToCopy++] = (char)sysexBuffer[textStartIndex + k];
+                } else { break; }
+            }
+            nameBuffer[charsToCopy] = '\0';
+            songs[songIdx] = String(nameBuffer);
+        }
+        
+        // Serial.print(F("SysEx: Set Song[")); Serial.print(songIdx); Serial.print(F("] to '")); Serial.print(songs[songIdx]); Serial.println(F("'"));
+
+        // --- Revised numSongs logic ---
+        // If a name was set for an index >= current numSongs, update numSongs.
+        // Or, always recount to find the highest populated song index.
+        // Let's try a robust recount.
+        int highestPopulatedSong = -1;
+        for (int k = 0; k < 25; k++) {
+            if (!songs[k].isEmpty() && !(k==0 && songs[k]=="Pedalboard" && songs[k].length()==10 && k>0 && songs[k-1].isEmpty()) ) { // Check if it's not just a default placeholder for higher slots if lower ones are empty
+                // More robust: check if songs[k] is not the default "Song X" placeholder
+                String defaultPlaceholder = "Song " + String(k + 1);
+                if (k > 0 && songs[k] == defaultPlaceholder && songs[k-1].isEmpty()){
+                     // This is likely an unpopulated default, don't count it yet unless explicitly set.
+                } else if (k == 0 && songs[k] == "Pedalboard" && songs[1].isEmpty() && songs[1] == "Song 2") {
+                    // Only pedalboard mode, and next is default placeholder.
+                }
+                else {
+                   highestPopulatedSong = k;
+                }
+            }
+        }
+        numSongs = highestPopulatedSong + 1;
+        if (numSongs == 0 && !songs[0].isEmpty()) { // If only slot 0 has a name (e.g. "Pedalboard")
+            numSongs = 1;
+        } else if (numSongs == 0 && songs[0].isEmpty()){ // Truly empty
+            songs[0] = "Pedalboard"; // fallback
+            numSongs = 1;
+        }
+
+
+        // Ensure currentSong is valid after numSongs might have changed
+        if (currentSong >= numSongs && numSongs > 0) {
+            currentSong = numSongs - 1;
+        } else if (numSongs == 0) { // Should not happen if we default songs[0]
+            currentSong = 0;
+        }
+        // --- End revised numSongs logic ---
+
+    } else if (command == CMD_SET_BUTTON_NAME_FROM_GP) {
+        // ... (button name parsing remains the same) ...
+        textStartIndex = 5; 
+        if (sysexBytesReceived < textStartIndex) { return; }
+        byte buttonIdx = sysexBuffer[4];
+        if (buttonIdx >= 6) { return; }
+
+        if (sysexBytesReceived < textStartIndex ) { 
+            buttonText[songIdx][buttonIdx] = ""; 
+        } else {
+            actualTextLengthInPayload = sysexBytesReceived - textStartIndex;
+            int charsToCopy = 0;
+            for (int k = 0; k < actualTextLengthInPayload; k++) {
+                if (charsToCopy < MAX_NAME_LENGTH_FROM_SYSEX - 1) {
+                    nameBuffer[charsToCopy++] = (char)sysexBuffer[textStartIndex + k];
+                } else { break; }
+            }
+            nameBuffer[charsToCopy] = '\0';
+            buttonText[songIdx][buttonIdx] = String(nameBuffer);
+        }
+        // Serial.print(F("SysEx: Set buttonText[")); // ...
+    } else {
+        // Serial.print(F("SysEx: Unknown command: 0x")); Serial.println(command, HEX);
+        return;
+    }
+
+    if (songIdx == currentSong) {
+        message = songs[currentSong]; 
+        lastButton = -1; 
+        updateScreens(); 
+    }
+}
+
+//End Sysex MIDI Code-----------------------------------------------------------------------
+
+
+
 // Select I2C BUS
 void SelectScreen(uint8_t bus){
   Wire.beginTransmission(0x70);  // TCA9548A address
@@ -104,8 +235,8 @@ const int resolution = 256;
 
 // DEFINE HERE THE KNOWN NETWORKS
 const char* KNOWN_SSID[] = {"LL", "TellMyWifiLover","CoS"};
-const char* KNOWN_PASSWORD[] = {"password","password","password"};
-const IPAddress KNOWN_STATICIP[] = {IPAddress(192,168,137,20), IPAddress(192,168,100,28), IPAddress(192,168,50,20)};
+const char* KNOWN_PASSWORD[] = {"billow11","billow11","225Reimer"};
+const IPAddress KNOWN_STATICIP[] = {IPAddress(192,168,137,20), IPAddress(192,168,100,22), IPAddress(192,168,50,20)};
 const IPAddress KNOWN_GATEWAY[] = {IPAddress(192,168,137,1), IPAddress(192,168,100,254), IPAddress(192,168,50,1)};
 boolean wifiFound = false;
 int i, n;
@@ -207,62 +338,29 @@ void setup()
   minX = 0;
 
   
-  //Get time on from onboard storage
-  //storedOnTime = preferences.getULong("ontime", 0);
+ 
   
-  
-
-   //DEBUG Preferences Not Saving
-   //Use this to format preferences storage if there's an issue
-   //nvs_flash_erase(); // erase the NVS partition and...
-   //nvs_flash_init(); // initialize the NVS partition.
-   //preferences.begin("debug", false);
-   //preferences.clear();
-   //Checking if preferences can be saved
-   //Serial.println("saving debug data");
-   //preferences.putString("saveTest","SaveWorkedIfYouSeeThis");
-   //Serial.println("Retrieving Data");
-   //Serial.println(preferences.getString("saveTest",""));
 
   
   //Get song and button text from onboard storage
   //Data is stored in preferences "pedalboard" namespace
-  preferences.begin("pedalboard", false);
-  
-  for (int i=1;i<=25;i++) {
+  //preferences.begin("pedalboard", false);
 
-    //populate songs
-    String stringKey1 = "song" + String(i);
-    char key1[7];
-    stringKey1.toCharArray(key1,7);
-    songs[i-1] = preferences.getString(key1,String(""));
-    if (songs[i-1].length() > 0) numSongs += 1;
-    //Serial.println("");
-    //Serial.print("Song ");
-    //Serial.print(i);
-    //Serial.print(": ");
-    //Serial.println(songs[i-1]);
-    
-    //populate button text
-    String stringKey = "btn" + getPadded(i);
-    char key[6];
-    stringKey.toCharArray(key,6);
-    for (int x=1;x<=6;x++) {
-      String newStringKey = stringKey + getPadded(x);
-      
-      char newKey[8];
-      newStringKey.toCharArray(newKey,8);
-      //Serial.print("New Key: ");
-      //Serial.println(newKey);
-      buttonText[i-1][x-1] = preferences.getString(newKey,String(""));
- 
-      //Serial.print(" btn ");
-      //Serial.print(x);
-      //Serial.print(": ");
-      //Serial.print(buttonText[i-1][x-1]);
+ numSongs = 25;
+
+ for (int i = 0; i < 25; i++) {
+    if (i == 0) {
+        songs[i] = "Pedalboard"; // Default for the first "song"
+    } else {
+        songs[i] = "Song " + String(i+1); // Placeholder name
     }
-  
-  }
+    for (int j = 0; j < 6; j++) {
+        buttonText[i][j] = "Btn " + String(j+1); // Placeholder button text
+    }
+ }
+
+ message = songs[currentSong];
+ 
 
   updateScreens();
   
@@ -315,7 +413,7 @@ void setup()
   analogWrite(greenPin, 0);
   analogWrite(bluePin, 0);
 
-  setRGBColor("red");
+  //setRGBColor("red");
 
   
 
@@ -468,56 +566,116 @@ void setup()
 // Function to process incoming MIDI messages from USB Serial (Hairless MIDI)
 void processMidiInput() {
     static byte incomingByte;
-    static byte statusByte = 0;
-    static byte dataByte1 = 0;
-    static int messageState = 0; // 0: waiting for status, 1: data1, 2: data2
+    static byte statusByte = 0; // For regular MIDI messages
+    static byte dataByte1 = 0;  // For regular MIDI messages
+    static int regularMessageState = 0; // 0: waiting for status, 1: data1, 2: data2
 
-    while (Serial.available() > 0) { // Read from main USB Serial
-        incomingByte = Serial.read(); // Read from main USB Serial
+    while (Serial.available() > 0) {
+        incomingByte = Serial.read();
 
-        if (incomingByte >= 0xF8) { // Real-time messages
-            continue;
-        } else if (incomingByte >= 0xF0) { // System Common messages
-            messageState = 0;
-            statusByte = 0;
-            continue;
-        } else if (incomingByte >= 0x80) { // Status byte
-            statusByte = incomingByte;
-            messageState = 1;
-        } else if (statusByte != 0) { // Data byte
-            if (messageState == 1) {
-                dataByte1 = incomingByte;
-                messageState = 2;
-            } else if (messageState == 2) { // dataByte2 = incomingByte
-                byte command = statusByte & 0xF0;
-                byte midiChannel = statusByte & 0x0F;
-
-                // Check for Note On on MIDI Channel 3 (0-indexed channel 2)
-                // Velocity > 0 for Note On
-                if (command == 0x90 && midiChannel == 2 && incomingByte > 0) { // incomingByte is velocity here
-                    int newSongCandidate = dataByte1; // Note number
-
-                    if (newSongCandidate >= 0 && newSongCandidate < numSongs) {
-                        currentSong = newSongCandidate;
-                        // Serial.print("MIDI via USB: Set currentSong to "); Serial.println(currentSong);
-                        // Serial.print("Song Name: "); Serial.println(songs[currentSong]);
-
-                        message = songs[currentSong]; // Update main display message
-                        lastButton = -1; // Indicate change not from a footswitch
-                        updateScreens(); // Refresh displays
-
-                        //setRGBColor("white");
-                        delay(50);
-                        //setRGBColor(originalColor);
-                    } else {
-                        // Serial.print("MIDI via USB: Note number "); Serial.print(newSongCandidate);
-                        // Serial.print(" out of range for numSongs: "); Serial.println(numSongs);
-                    }
+        if (inSysexMessage) {
+            if (incomingByte == 0xF7) { // SysEx End
+                // A complete SysEx message (excluding F0 and F7) is now in sysexBuffer
+                // Print for debug:
+                // Serial.print(F("SysEx End. Data bytes received: ")); Serial.println(sysexBytesReceived);
+                // Serial.print(F("Buffer: "));
+                // for(int i=0; i<sysexBytesReceived; i++) { Serial.print(sysexBuffer[i], HEX); Serial.print(" "); }
+                // Serial.println();
+                
+                parseAndApplySysex(); // Process the buffered SysEx data
+                
+                inSysexMessage = false;
+                sysexBytesReceived = 0; // Reset for next message
+            } else if (sysexBytesReceived < SYSEX_BUFFER_MAX_LENGTH) {
+                // Store data bytes (those between F0 and F7)
+                if (incomingByte < 0x80) { // Valid SysEx data byte
+                    sysexBuffer[sysexBytesReceived++] = incomingByte;
+                } else {
+                    // Invalid byte within SysEx (e.g., another status byte before F7), abort current SysEx
+                    // Serial.print(F("SysEx Aborted: Invalid data byte 0x")); Serial.println(incomingByte, HEX);
+                    inSysexMessage = false;
+                    sysexBytesReceived = 0;
+                    // This incomingByte might be a new status byte, so let it fall through
+                    // to regular MIDI processing *if* this byte itself is >= 0x80
                 }
-                messageState = 1; // Ready for next dataByte1 (running status) or new status byte
+            } else {
+                // SysEx buffer overflow, message too long for our buffer
+                // Serial.println(F("SysEx Buffer Overflow. Aborting current SysEx."));
+                inSysexMessage = false; // Stop collecting this message
+                sysexBytesReceived = 0; // Reset buffer
+                // The current incomingByte is discarded as part of the overflowed message
+            }
+             // If SysEx just ended or was aborted, and the current byte is NOT a new status byte, consume it.
+            if (!inSysexMessage && incomingByte < 0x80) {
+                continue; 
             }
         }
-    }
+        
+        // This 'if' must be separate to handle fall-through from SysEx abortion if a status byte caused the abort.
+        if (!inSysexMessage) { 
+            if (incomingByte == 0xF0) { // SysEx Start
+                inSysexMessage = true;
+                sysexBytesReceived = 0; // Clear buffer for new message
+                statusByte = 0;         // Clear regular MIDI message status
+                regularMessageState = 0;
+                // Serial.println(F("SysEx Start detected."));
+            } else if (incomingByte >= 0xF8) { // Real-time messages (Timing Clock, Start, Stop, etc.)
+                // Typically ignore these for this application or handle separately if needed
+                continue; 
+            } else if (incomingByte >= 0xF1 && incomingByte <= 0xF6 ) { // Other System Common (MTC, Song Select, Tune Req)
+                // Usually ignored, reset regular message state
+                statusByte = 0;
+                regularMessageState = 0;
+                continue;
+            } else if (incomingByte >= 0x80) { // Regular MIDI Status byte (NoteOn, NoteOff, CC, PC, etc.)
+                statusByte = incomingByte;
+                regularMessageState = 1; // Expecting dataByte1 next
+            } else if (statusByte != 0) { // Data byte for a regular MIDI message (running status active)
+                if (regularMessageState == 1) { // This is dataByte1
+                    dataByte1 = incomingByte;
+                    // For 2-byte messages like PC or ChanPressure, process here if needed.
+                    // For 3-byte messages, wait for dataByte2.
+                    byte commandType = statusByte & 0xF0;
+                    if (commandType == 0xC0 || commandType == 0xD0) { // PC or Channel Pressure (2-byte messages)
+                        // Process 2-byte message if necessary
+                        // Example: if (commandType == 0xC0 && (statusByte & 0x0F) == MY_PC_CHANNEL) { processProgramChange(dataByte1); }
+                        regularMessageState = 1; // Ready for next dataByte1 (running status) or new status
+                    } else {
+                        regularMessageState = 2; // Expecting dataByte2 next (for 3-byte messages)
+                    }
+                } else if (regularMessageState == 2) { // This is dataByte2
+                    // Now we have a complete 3-byte message (statusByte, dataByte1, incomingByte as dataByte2)
+                    byte command = statusByte & 0xF0;
+                    byte midiChannel = statusByte & 0x0F; // 0-15
+
+                    if (command == 0x90 && midiChannel == 2 && incomingByte > 0) { // Note On, MIDI Channel 3 (index 2), velocity > 0
+                        int newSongCandidate = dataByte1; // Note number
+                        
+                        if (newSongCandidate >= 0 && newSongCandidate < 25) { // Always allow selection within physical slot limits (0-24)
+                            currentSong = newSongCandidate; // Set currentSong immediately
+                            // Serial.print(F("MIDI NoteOn: Set currentSong to ")); Serial.println(currentSong);
+                            
+                            // Update message based on potentially SysEx-updated song name
+                            // If songs[currentSong] is empty or a placeholder, SysEx will hopefully fill it soon.
+                            if (!songs[currentSong].isEmpty()) {
+                                message = songs[currentSong];
+                            } else {
+                                message = "Song " + String(currentSong + 1); // Temporary placeholder
+                            }
+                            
+                            lastButton = -1; 
+                            updateScreens(); 
+                            //setRGBColor("white"); delay(50); setRGBColor(originalColor);
+                        }
+                    }
+                    // Add other 3-byte message handling here (Note Off 0x80, CC 0xB0, PitchBend 0xE0, PolyPressure 0xA0) if needed.
+                    
+                    regularMessageState = 1; // After a 3-byte message, next data byte would be dataByte1 for running status
+                }
+            }
+            // If incomingByte < 0x80 and statusByte is 0, it's an orphaned data byte, ignore.
+        } // end if (!inSysexMessage) block
+    } // end while (Serial.available())
 }
 
 void loop()
