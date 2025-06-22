@@ -1,0 +1,194 @@
+var ToPedalBoard : MidiOutBlock // Global variable for the script
+Var ReaperOSC : OSCMessage
+
+// --- Constants for SysEx Protocol (remain the same) ---
+const PEDALBOARD_MANUF_ID_HEX : string = "7D" 
+const PEDALBOARD_DEVICE_ID_HEX : string = "01"
+const CMD_SET_SONG_NAME_HEX : string = "01"
+const CMD_SET_BUTTON_NAME_HEX : string = "02"
+const SYSEX_START_HEX : string = "F0"
+const SYSEX_END_HEX : string = "F7"
+
+// Helper function to convert a byte value (integer 0-255) to a 2-char hex string (remains the same)
+function ByteToHex2Chars(val : integer) returns string 
+    Var 
+        hexChars : string; highNibble : integer; lowNibble : integer;
+    hexChars = "0123456789ABCDEF"; 
+    if val < 0 then val = 0 End if val > 255 then val = 255 End
+    highNibble = val / 16; lowNibble = val % 16;  
+    result = CopySubstring(hexChars, highNibble, 1) + CopySubstring(hexChars, lowNibble, 1)
+End
+
+// Helper function to send individual text via SysEx (remains the same)
+function SendTextAsSysex(targetBlock : MidiOutBlock, commandHex : string, songIndexOnPedalboard : integer, buttonIndexOnPedalboard : integer, textToSend : string)
+    Var 
+        maxNameCharLen : integer; actualText : string; payloadAsHexString : string;      
+        textAsHexString : string; completeSysexHexString : string; finalSysexMsg : SysexMessage; 
+        i : integer; headerSizeInPayload : integer;
+    maxNameCharLen = 30; payloadAsHexString = ""; headerSizeInPayload = 4; 
+    if commandHex == CMD_SET_BUTTON_NAME_HEX then headerSizeInPayload = 5 End
+    if Length(textToSend) > maxNameCharLen then
+        actualText = CopySubstring(textToSend, 0, maxNameCharLen)
+    else
+        actualText = textToSend
+    End
+    payloadAsHexString = payloadAsHexString + PEDALBOARD_MANUF_ID_HEX + PEDALBOARD_DEVICE_ID_HEX + commandHex + ByteToHex2Chars(songIndexOnPedalboard)
+    if commandHex == CMD_SET_BUTTON_NAME_HEX then
+        payloadAsHexString = payloadAsHexString + ByteToHex2Chars(buttonIndexOnPedalboard)
+    End
+    textAsHexString = StringToHexString(actualText) 
+    payloadAsHexString = payloadAsHexString + textAsHexString
+    completeSysexHexString = SYSEX_START_HEX + payloadAsHexString + SYSEX_END_HEX
+    finalSysexMsg = completeSysexHexString 
+    SendSysexExternal(targetBlock, finalSysexMsg) 
+    Sleep(20) // Slightly increased sleep for potentially larger data bursts
+End
+
+// NEW Function: Send all song names AND ALL THEIR BUTTON (SONG PART) NAMES
+function SendAllDataToPedalboard()
+    Var // Local variables for SendAllDataToPedalboard
+        originalGPSongIndex : integer;
+        originalGPSongPartIndex : integer;
+        gpSongCount : integer;
+        pedalboardSongIndex : integer;
+        gpSongPartCountForCurrentIteratedSong : integer;
+        i_song : integer; 
+        i_part : integer; 
+        songName : string;
+        partName : string;
+        switchSuccess : boolean; // Dummy variable to "consume" the return value
+    // End Var
+// Begin    
+    Print("GP: Starting SendAllDataToPedalboard...")
+
+    originalGPSongIndex = GetCurrentSongIndex()
+    originalGPSongPartIndex = GetCurrentSongPartIndex()
+    gpSongCount = GetSongCount()
+
+    For i_song = 0; i_song < gpSongCount; i_song = i_song + 1 Do
+        if i_song < 50 then 
+            pedalboardSongIndex = i_song
+
+            Print("GP: Switching to song index " + IntToString(i_song) + " to get its data...")
+            // Assign the result of SwitchToSongByIndex to the dummy variable
+            switchSuccess = SwitchToSongByIndex(i_song, 0) 
+            // You could optionally check switchSuccess here if needed, e.g.:
+            // If not switchSuccess then Print("Warning: Failed to switch to song " + IntToString(i_song)) End
+
+            Sleep(1000) 
+
+            songName = GetSongName(i_song) 
+            If songName <> "" Then
+                SendTextAsSysex(ToPedalBoard, CMD_SET_SONG_NAME_HEX, pedalboardSongIndex, 0, songName)
+            Else 
+                SendTextAsSysex(ToPedalBoard, CMD_SET_SONG_NAME_HEX, pedalboardSongIndex, 0, "Song " + IntToString(pedalboardSongIndex + 1) )
+            End
+
+            gpSongPartCountForCurrentIteratedSong = GetSongPartCount()
+            For i_part = 0; i_part < 6; i_part = i_part + 1 Do
+                if i_part < gpSongPartCountForCurrentIteratedSong then
+                    partName = GetSongPartName(i_part)
+                    If partName <> "" Then
+                        SendTextAsSysex(ToPedalBoard, CMD_SET_BUTTON_NAME_HEX, pedalboardSongIndex, i_part, partName)
+                    Else
+                        SendTextAsSysex(ToPedalBoard, CMD_SET_BUTTON_NAME_HEX, pedalboardSongIndex, i_part, " ") 
+                    End
+                else 
+                    SendTextAsSysex(ToPedalBoard, CMD_SET_BUTTON_NAME_HEX, pedalboardSongIndex, i_part, " ") 
+                End
+            End 
+        else
+            //break 
+        End 
+    End 
+
+    Print("GP: Restoring original song index " + IntToString(originalGPSongIndex) + ", part " + IntToString(originalGPSongPartIndex))
+    if originalGPSongIndex >= 0 then 
+        // Assign the result of SwitchToSongByIndex to the dummy variable here too
+        switchSuccess = SwitchToSongByIndex(originalGPSongIndex, originalGPSongPartIndex)
+        Sleep(50) 
+    End
+
+    Print("GP: Finished SendAllDataToPedalboard.")
+End
+
+
+// --- System Event Callbacks (remain the same) ---
+//On SystemEvent Matching GigLoaded 
+//   Print("GP: GigLoaded event triggered.")
+//   SendAllDataToPedalboard()
+//End
+
+On SystemEvent Matching SetlistChanged
+   Print("GP: SetlistChanged event triggered. New setlist index: ")
+   SendAllDataToPedalboard()
+End
+
+
+// --- On Song Callback ---
+// This callback will now primarily be for ensuring the ESP32 is on the right song index.
+// The SysEx sending here is somewhat redundant if SendAllDataToPedalboard has just populated everything,
+// but it acts as a robust way to ensure the current song's data is always sent if it becomes active
+// through any means (not just pedalboard next/prev).
+// For maximum speed on pedalboard next/prev, this SysEx sending could be conditionally disabled
+// if we know SendAllDataToPedalboard has recently run. But that adds complexity.
+// Let's keep it simple: it sends data, ESP32 just overwrites.
+On Song(oldSongIndex : integer, newSongIndex : integer) 
+    Var
+        pedalboardSongIndex : integer;
+        noteToPedalboard : NoteMessage; 
+        i : integer; // For loop over parts
+        currentGPSongName : string; 
+        songPartName : string;
+        gpSongPartCount : integer;
+        // Variables for OSC to Reaper
+        reaperTabIndex1Based : integer; // SWS_PROJTAB<N> uses 1-based N
+        reaperTabIndex : integer;
+        reaperTargetName : string; // The name of your OSC target in GP settings
+        reaperIPAddress : string;
+        reaperPort : integer;
+        reaperActionString : string; // To hold "_SWS_PROJTAB<N>"
+        
+        // Initialize OSC target name
+        reaperTargetName = "ReaperOSC_Target"; // <<<<< SET THIS TO YOUR OSC TARGET NAME IN GP SETTINGS
+
+        
+    
+    pedalboardSongIndex = -1 
+
+    if newSongIndex >= 0 and newSongIndex < 50 then 
+        pedalboardSongIndex = newSongIndex
+    else
+        Print("GP OnSong: Error - GP Song Index " + IntToString(newSongIndex) + " is out of range for pedalboard (0-50).")
+    End
+    
+    if pedalboardSongIndex >= 0 and pedalboardSongIndex < 50 then 
+        // 1. Send NoteOn to ESP32 to make sure it selects this song index
+        noteToPedalboard = MakeNoteMessageEx(pedalboardSongIndex, 127, 3) 
+        SendNowExternal(ToPedalBoard, noteToPedalboard)
+        // Print("GP OnSong: Sent NoteOn to Pedalboard for song index " + IntToString(pedalboardSongIndex))
+        
+        // --- NEW: Send OSC to Reaper ---
+        reaperTabIndex1Based = newSongIndex + 1; // Assuming Reaper tab is 1-based
+        
+        reaperActionString = "_SWS_PROJTAB" + IntToString(reaperTabIndex1Based);
+
+        // Get IP and Port for the named target
+        reaperIPAddress = OSC_GetIPAddressFromTargetName(reaperTargetName);
+        reaperPort = OSC_GetPortNumberFromTargetName(reaperTargetName);
+
+        if reaperIPAddress <> "" and reaperPort > 0 then // Check if target was found
+            OSC_ClearArgs(ReaperOSC); 
+            OSC_SetAddress(ReaperOSC, "/action/" + reaperActionString);
+            //OSC_AppendIntArg(ReaperOSC, reaperTabIndex1Based); 
+            
+            // Use OSC_SendSpecific with the retrieved IP and Port
+            OSC_SendSpecific(ReaperOSC, reaperIPAddress, reaperPort);
+
+            Print("GP OnSong: Sent OSC to Reaper (" + reaperIPAddress + ":" + IntToString(reaperPort) + ") to select tab " + IntToString(reaperTabIndex1Based));
+        else
+            Print("GP OnSong: Error - OSC Target '" + reaperTargetName + "' not found or invalid.");
+        End;
+        
+    End 
+End
